@@ -140,7 +140,7 @@ app.get('/api/branding/image/:kind(logo|favicon)', (req, res) => {
   const href = req.params.kind === 'logo' ? b.logo : (b.icons[0] && b.icons[0].href);
   const file = branding.imageFile(href);
   if (!file || !fs.existsSync(file)) return res.status(404).end();
-  res.sendFile(file, { headers: { 'Cache-Control': 'no-cache' } });
+  res.sendFile(file, { headers: { 'Cache-Control': 'no-cache', ...branding.IMAGE_HEADERS } });
 });
 
 // ---- disk usage ----

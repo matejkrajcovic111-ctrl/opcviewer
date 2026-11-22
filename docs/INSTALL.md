@@ -5,7 +5,7 @@
 - **Ubuntu 22.04, Ubuntu 24.04 or Debian 12**, x86_64 (PotreeConverter is a 64-bit Intel/AMD build). A virtual machine or an LXC container is fine.
 - **2 GB RAM** or more. Conversion and thumbnails are the heavy parts; viewing costs the server almost nothing.
 - **Disk space** for your projects: a converted project takes about as much space as its LAS files, or half with Brotli. Leave room for one upload plus its conversion on top.
-- A machine that does **nothing else on port 80**. The installer refuses to take over an Apache that already serves other sites; use `OPCV_HTTP_PORT` then (below).
+- A machine that does **nothing else on port 80**. The installer replaces only Apache's untouched default page. It stops, and changes nothing, if Apache already serves another site (including one in `000-default.conf`) or another program uses the port; use `OPCV_HTTP_PORT` then (below).
 - Internet access during installation (packages, Node.js, PotreeConverter, headless Chrome).
 
 ## Install

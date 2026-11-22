@@ -2,6 +2,17 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.0.1 – 2026-11-22
+
+### Security
+- SVG uploads: scripts hidden in character references, entity declarations or embedded pages (`foreignObject`, `iframe`, `embed`, `object`) are refused. Uploaded images are served with `Content-Security-Policy: sandbox` and `nosniff`, by the admin panel and by Apache (`.htaccess`), so an SVG can never run a script when opened directly.
+
+### Fixed
+- Installer no longer takes over a website that lives in Apache's `000-default.conf`; only the untouched stock default site is replaced.
+- Installer stops with a clear message when the chosen port is used by another program (e.g. nginx), or when port 80 is taken and Apache isn't installed yet. It used to fail halfway.
+- Installer reloads Apache instead of restarting it, so other sites on the same Apache keep running.
+- The installer runs as one function, so a download cut short runs nothing.
+
 ## 2.0.0 – 2026-11-22
 
 Renamed to **opcviewer** and made installable by anyone.

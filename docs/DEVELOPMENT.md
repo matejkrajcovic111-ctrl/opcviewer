@@ -30,10 +30,11 @@ npm test            # node --test "test/**/*.test.js"
 | `template.test.js` | generated pages byte for byte against `test/fixtures/` (and against the pages from before the 2.0 rename), HTML escaping |
 | `projects.test.js` | project name → folder name |
 | `stats.test.js` | views, ignored visitors, load reports (old and new beacon name) |
-| `branding.test.js` | validation, publishing, image uploads (type by content, size, SVG scripts) |
+| `branding.test.js` | validation, publishing, image uploads (type by content, size, SVG scripts in all disguises, safety headers) |
 | `viewer-branding.test.js` | the viewer's badge, icons, language and colours, run in a `vm` sandbox with a small fake DOM (`test/helpers/mini-dom.js`) |
 | `volume.test.js` | the volume grid on a cone and a pit with known volumes (within 0.5 %) |
 | `setup-code.test.js` | the one-time setup code |
+| `install-preflight.test.js` | the installer never takes over a site or port in use (sources `install.sh` with `OPCV_SOURCE_ONLY=1` against a fake `/etc/apache2`) |
 | `thumbnails.test.js` | a browser that can't start fails the job instead of hanging |
 
 Viewer scripts are plain browser scripts; `test/helpers/viewer-sandbox.js` runs them in Node's `vm` with just enough of `window` and `document`. Anything that needs WebGL is tested in a real browser (below).

@@ -43,6 +43,45 @@ die() { printf '\n\033[31mopcviewer install stopped: %s\033[0m\n' "$*" >&2; exit
 # planted there can't make root overwrite a system file.
 as_user() { runuser -u "$SVC_USER" -- env HOME="$SVC_HOMEDIR" PATH="$OPCV_HOME/node/bin:/usr/bin:/bin" "$@"; }
 
+# Never take over a web server or site that is already in use.
+APACHE_ETC=${APACHE_ETC:-/etc/apache2}
+DEFAULT_DOCROOT=${DEFAULT_DOCROOT:-/var/www/html}
+port_listener() { # name of the program listening on TCP port $1, empty if none
+  ss -Hltnp "sport = :$1" 2>/dev/null | grep -o 'users:(("[^"]*' | head -n1 | cut -d'"' -f2 || true
+}
+stock_default_site() { # 000-default.conf is still the untouched site of a fresh Apache install
+  grep -Eq "^[[:space:]]*DocumentRoot[[:space:]]+$DEFAULT_DOCROOT/?[[:space:]]*$" "$APACHE_ETC/sites-enabled/000-default.conf" || return 1
+  [ -z "$(find "$DEFAULT_DOCROOT" -mindepth 1 -maxdepth 1 ! -name index.html -print -quit 2>/dev/null)" ] || return 1
+  [ ! -e "$DEFAULT_DOCROOT/index.html" ] || grep -q 'Apache2 .*Default Page' "$DEFAULT_DOCROOT/index.html"
+}
+check_apache_sites() { # on port 80 opcviewer replaces the default site, so there must be no other
+  local others
+  [ "$1" = 80 ] && [ -d "$APACHE_ETC/sites-enabled" ] || return 0
+  others=$(find "$APACHE_ETC/sites-enabled" -mindepth 1 -maxdepth 1 ! -name 000-default.conf ! -name opcviewer.conf -printf '%f ')
+  if [ -e "$APACHE_ETC/sites-enabled/000-default.conf" ] && ! stock_default_site; then
+    others="${others}000-default.conf (changed from the stock page) "
+  fi
+  [ -z "$others" ] || die "Apache already serves other sites here ($others). Install on a clean machine, or set OPCV_HTTP_PORT to a free port."
+}
+check_port() {
+  local who
+  who=$(port_listener "$1")
+  if [ -n "$who" ]; then
+    # Apache itself is fine on 80 (sites checked above) or on opcviewer's own port (an update).
+    if [ "$who" != apache2 ] || { [ "$1" != 80 ] && ! grep -qs "<VirtualHost \*:$1>" "$APACHE_ETC/sites-available/opcviewer.conf"; }; then
+      die "port $1 is already used by $who. Set OPCV_HTTP_PORT to a free port."
+    fi
+  fi
+  # A new Apache package always starts on port 80 first.
+  if [ ! -d "$APACHE_ETC" ]; then
+    who=$(port_listener 80)
+    [ -z "$who" ] || die "port 80 is already used by $who, and Apache's package starts on port 80 when it is installed. Install Apache and move it to another port first, or free port 80."
+  fi
+}
+
+# Everything below runs only when the script is executed, not when it is sourced for tests
+# (OPCV_SOURCE_ONLY=1). Being one function also means a download cut short runs nothing.
+main() {
 # ---------------------------------------------------------------- 1. preflight
 [ "$(id -u)" -eq 0 ] || die "run it as root (sudo bash install.sh)."
 [ "$(uname -m)" = x86_64 ] || die "only x86_64 is supported (the converter is a 64-bit Intel/AMD build); this machine is $(uname -m)."
@@ -55,11 +94,8 @@ esac
 case "$OPCV_HTTP_PORT$OPCV_ADMIN_PORT" in *[!0-9]*) die "ports must be numbers." ;; esac
 [ "$OPCV_HTTP_PORT" != "$OPCV_ADMIN_PORT" ] || die "OPCV_HTTP_PORT and OPCV_ADMIN_PORT must differ."
 
-# Apache on port 80 takes over the default site; refuse if the machine already serves others.
-if [ "$OPCV_HTTP_PORT" = 80 ] && [ -d /etc/apache2/sites-enabled ]; then
-  others=$(find /etc/apache2/sites-enabled -mindepth 1 -maxdepth 1 ! -name 000-default.conf ! -name opcviewer.conf -printf '%f ')
-  [ -z "$others" ] || die "Apache already serves other sites here ($others). Install on a clean machine, or set OPCV_HTTP_PORT to a free port."
-fi
+check_apache_sites "$OPCV_HTTP_PORT"
+check_port "$OPCV_HTTP_PORT"
 
 # ---------------------------------------------------------------- 2. packages, user, Node, converter, app
 say "Installing system packages"
@@ -164,7 +200,7 @@ as_user cp "$APP"/viewer/opcviewer-*.js "$APP/viewer/opcviewer-stat.gif" "$libs/
 
 apache2ctl configtest 2>/dev/null || die "Apache configuration test failed (run: apache2ctl configtest)."
 systemctl enable -q apache2
-systemctl restart apache2
+systemctl reload-or-restart apache2   # reload keeps other sites on this Apache running
 
 # ---------------------------------------------------------------- 4. settings and service
 say "Starting the opcviewer service"
@@ -251,3 +287,6 @@ cat <<EOF
 Keep the admin panel on your own network. To share project pages online, see
 docs/INSTALL.md ("Going online") in the repository. Settings: $ENV_FILE
 EOF
+}
+
+[ -n "${OPCV_SOURCE_ONLY:-}" ] || main "$@"

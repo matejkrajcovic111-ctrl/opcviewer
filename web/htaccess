@@ -35,3 +35,11 @@ FileETag None
 
 # 5. No directory listings. The site root has its own index.html (web/landing.html).
 Options -Indexes
+
+# 6. Uploaded SVG logos and icons can never run scripts when opened directly.
+<IfModule mod_headers.c>
+    <FilesMatch "\.svg$">
+        Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>

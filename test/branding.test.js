@@ -89,3 +89,34 @@ test('removing the logo clears it and deletes the file', () => {
   assert.strictEqual(branding.load().logo, null);
   assert.ok(!fs.existsSync(path.join(tmp, 'www', 'potree_libs', 'opcviewer', 'logo.svg')));
 });
+
+test('SVG scripts hidden in entities, frames or embedded documents are rejected', () => {
+  const svg = (inner) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg">${inner}</svg>`);
+  const bad = [
+    '<foreignObject><iframe srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;"></iframe></foreignObject>',
+    '<a href="javascript&#58;alert(1)"><rect width="1" height="1"/></a>',
+    '<a href="&#106;avascript:alert(1)"><rect/></a>',
+    '<embed src="x.html"/>',
+    '<object data="x.html"></object>',
+  ];
+  for (const inner of bad) {
+    assert.throws(() => branding.storeImage('logo', svg(inner), 'a.svg'), /script|not allowed/i, inner);
+  }
+  assert.throws(() => branding.storeImage('logo',
+    Buffer.from('<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY j "javascript:alert(1)">]><svg><a href="&j;"><rect/></a></svg>'), 'a.svg'), /not allowed|not a SVG/i);
+});
+
+test('uploaded images are served with headers that stop them running scripts', () => {
+  const h = branding.IMAGE_HEADERS;
+  assert.match(h['Content-Security-Policy'], /default-src 'none'/);
+  assert.match(h['Content-Security-Policy'], /sandbox/);
+  assert.strictEqual(h['X-Content-Type-Options'], 'nosniff');
+});
+
+test('Apache serves SVG files in the web folder with the same script-blocking headers', () => {
+  const htaccess = fs.readFileSync(path.join(__dirname, '..', 'web', 'htaccess'), 'utf8');
+  const block = htaccess.match(/<IfModule mod_headers\.c>[\s\S]*?<FilesMatch "\\\.svg\$">([\s\S]*?)<\/FilesMatch>[\s\S]*?<\/IfModule>/);
+  assert.ok(block, 'an SVG header block guarded by IfModule mod_headers.c');
+  assert.match(block[1], /Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox"/);
+  assert.match(block[1], /X-Content-Type-Options "nosniff"/);
+});
