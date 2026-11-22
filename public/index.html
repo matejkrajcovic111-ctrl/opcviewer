@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opcviewer</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" id="faviconLink">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="/logo.svg" alt="" class="brand-logo" id="brandLogo">
+      <h1 id="brandName">opcviewer</h1>
+    </div>
+    <div class="header-actions">
+      <button id="brandingBtn">Branding</button>
+      <button id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="disk-usage" id="diskUsage">
+      <div class="disk-usage-top">
+        <span class="disk-usage-title">Disk usage</span>
+        <span class="disk-usage-pct" id="diskUsagePct">&nbsp;</span>
+      </div>
+      <div class="disk-usage-bar"><div id="diskUsageFill"></div></div>
+      <div class="disk-usage-label" id="diskUsageLabel">Checking disk space...</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="projects">Projects</div>
+      <div class="tab" data-tab="trash">Trash</div>
+      <div class="tab" data-tab="jobs">Conversions</div>
+    </div>
+
+    <section id="tab-projects">
+      <div class="toolbar">
+        <div class="search"><input type="text" id="searchInput" placeholder="Filter projects..."></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="backfillThumbsBtn">Generate missing thumbnails</button>
+          <button class="primary" id="newProjectBtn">+ New project</button>
+        </div>
+      </div>
+      <div id="projectsGrid" class="grid"></div>
+    </section>
+
+    <section id="tab-trash" hidden>
+      <p class="hint">Deleted projects land here first. Restore them or permanently remove them to free disk space.</p>
+      <div id="trashGrid" class="grid"></div>
+    </section>
+
+    <section id="tab-jobs" hidden>
+      <div id="jobsList" class="grid"></div>
+    </section>
+  </div>
+
+  <!-- New project modal -->
+  <div class="overlay" id="uploadOverlay" hidden>
+    <div class="modal">
+      <h2>New project</h2>
+      <div class="error" id="uploadError"></div>
+
+      <div id="uploadForm">
+        <div class="row">
+          <label for="projectName">Project name</label>
+          <input type="text" id="projectName" placeholder="e.g. Zamocek_2026">
+        </div>
+        <div class="row">
+          <label for="lasFiles">LAS / LAZ file(s)</label>
+          <input type="file" id="lasFiles" multiple accept=".las,.laz">
+          <div class="filerow" id="fileSummary"></div>
+        </div>
+        <div class="checkrow">
+          <input type="checkbox" id="brotliCheck" checked>
+          <label for="brotliCheck">Compress output with Brotli (smaller on disk, recommended)</label>
+        </div>
+        <div class="progress-bar" id="uploadProgressWrap" hidden><div id="uploadProgressBar"></div></div>
+        <div class="footer">
+          <button id="cancelUploadBtn">Cancel</button>
+          <button class="primary" id="startUploadBtn">Upload &amp; convert</button>
+        </div>
+      </div>
+
+      <div id="convertPanel" hidden>
+        <p>Converting <strong id="convertName"></strong> <span class="badge" id="convertStatusBadge"></span></p>
+        <div class="log" id="convertLog"></div>
+        <div class="footer">
+          <button id="closeConvertBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="overlay" id="settingsOverlay" hidden>
+    <div class="modal">
+      <h2>Settings &mdash; <span id="settingsProjectTitle"></span></h2>
+      <div class="error" id="settingsError"></div>
+      <div class="row">
+        <label for="s_title">Display title</label>
+        <input type="text" id="s_title">
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label for="s_pointBudget">Point budget (millions)</label>
+          <input type="number" id="s_pointBudget" min="0.1" step="0.1">
+        </div>
+        <div class="row">
+          <label for="s_fov">Field of view</label>
+          <input type="number" id="s_fov" min="10" max="120">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label for="s_pointSize">Point size</label>
+          <input type="number" id="s_pointSize" min="0.1" step="0.1">
+        </div>
+        <div class="row">
+          <label for="s_pointSizeType">Point size type</label>
+          <select id="s_pointSizeType">
+            <option value="ADAPTIVE">Adaptive</option>
+            <option value="FIXED">Fixed</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label for="s_shape">Point shape</label>
+          <select id="s_shape">
+            <option value="SQUARE">Square</option>
+            <option value="CIRCLE">Circle</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="s_background">Background</label>
+          <select id="s_background">
+            <option value="gradient">Gradient</option>
+            <option value="skybox">Skybox</option>
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+      </div>
+      <div class="checkrow"><input type="checkbox" id="s_edlEnabled"><label for="s_edlEnabled">Eye Dome Lighting (EDL)</label></div>
+      <div class="checkrow"><input type="checkbox" id="s_useHQ"><label for="s_useHQ">High quality rendering (splatting, slower)</label></div>
+      <div class="checkrow"><input type="checkbox" id="s_showSidebar"><label for="s_showSidebar">Open sidebar by default</label></div>
+      <div class="checkrow"><input type="checkbox" id="s_boundingBox"><label for="s_boundingBox">Bounding Box tool (3Dsurvey-style section box)</label></div>
+      <label style="margin-top:6px;">Sidebar menus to show</label>
+      <div class="checkrow"><input type="checkbox" id="m_appearance"><label for="m_appearance">Appearance</label></div>
+      <div class="checkrow"><input type="checkbox" id="m_tools"><label for="m_tools">Tools</label></div>
+      <div class="checkrow"><input type="checkbox" id="m_clipping"><label for="m_clipping">Clipping</label></div>
+      <div class="checkrow"><input type="checkbox" id="m_measurements"><label for="m_measurements">Measurements</label></div>
+
+      <div class="footer">
+        <button id="cancelSettingsBtn">Cancel</button>
+        <button class="primary" id="saveSettingsBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Branding modal -->
+  <div class="overlay" id="brandingOverlay" hidden>
+    <div class="modal">
+      <h2>Branding</h2>
+      <p class="hint">Shown on every project page your clients open, and in this panel. Leave everything empty for plain opcviewer.</p>
+      <div class="error" id="brandingError"></div>
+      <div class="row">
+        <label for="b_name">Company name</label>
+        <input type="text" id="b_name" maxlength="120" placeholder="e.g. © Example Surveying">
+      </div>
+      <div class="row">
+        <label for="b_tagline">Second line (optional, hidden on phones)</label>
+        <input type="text" id="b_tagline" maxlength="120" placeholder="e.g. Jane Doe, surveyor">
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label for="b_url">Website</label>
+          <input type="url" id="b_url" placeholder="https://">
+        </div>
+        <div class="row">
+          <label for="b_guideUrl">User guide link</label>
+          <input type="url" id="b_guideUrl" placeholder="https://">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label for="b_lang">Viewer language for new visitors</label>
+          <select id="b_lang">
+            <option value="en">English</option>
+            <option value="sk">Slovak</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="b_accent">Accent colour</label>
+          <input type="color" id="b_accent" value="#4c8dff">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="row">
+          <label>Logo (PNG, JPEG, WebP or SVG, max 1 MB)</label>
+          <div class="imgrow">
+            <img id="b_logoPreview" alt="" hidden>
+            <span class="muted" id="b_logoNone">none</span>
+          </div>
+          <input type="file" id="b_logoFile" accept=".png,.jpg,.jpeg,.webp,.svg" hidden>
+          <button id="b_logoUpload">Upload</button> <button id="b_logoRemove">Remove</button>
+        </div>
+        <div class="row">
+          <label>Browser-tab icon (PNG, ICO or SVG, max 1 MB)</label>
+          <div class="imgrow">
+            <img id="b_faviconPreview" alt="" hidden>
+            <span class="muted" id="b_faviconNone">default</span>
+          </div>
+          <input type="file" id="b_faviconFile" accept=".png,.ico,.svg" hidden>
+          <button id="b_faviconUpload">Upload</button> <button id="b_faviconRemove">Remove</button>
+        </div>
+      </div>
+      <div class="footer">
+        <button id="cancelBrandingBtn">Close</button>
+        <button class="primary" id="saveBrandingBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename modal -->
+  <div class="overlay" id="renameOverlay" hidden>
+    <div class="modal" style="width:380px;">
+      <h2>Rename project</h2>
+      <div class="error" id="renameError"></div>
+      <div class="row">
+        <label for="renameInput">New name</label>
+        <input type="text" id="renameInput">
+        <div class="hint">This also renames the folder and its URL.</div>
+      </div>
+      <div class="footer">
+        <button id="cancelRenameBtn">Cancel</button>
+        <button class="primary" id="confirmRenameBtn">Rename</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm modal (generic) -->
+  <div class="overlay" id="confirmOverlay" hidden>
+    <div class="modal" style="width:380px;">
+      <h2 id="confirmTitle">Are you sure?</h2>
+      <p id="confirmMessage" style="color:var(--muted); font-size:0.9rem;"></p>
+      <div class="footer">
+        <button id="confirmCancelBtn">Cancel</button>
+        <button class="danger" id="confirmOkBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

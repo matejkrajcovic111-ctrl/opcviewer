@@ -1,0 +1,36 @@
+# Automatic checks, run by the Gitea Actions runner on every push.
+# A red mark on a commit means one of these steps failed: open the run in the
+# repo's Actions tab to see which. The runner is the host-mode runner
+# "claude-codex" (no Docker); tools it needs are installed on that machine.
+name: check
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: host
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      # The live server runs Node 24 (~/apps/node24 on the VM), so test with the same.
+      - name: Use Node 24
+        run: |
+          echo /opt/node24/bin >> "$GITHUB_PATH"
+      - name: Node version is 24
+        run: |
+          node --version | grep -q '^v24\.' || { node --version; exit 1; }
+      - name: Install Node dependencies
+        run: |
+          npm ci --no-audit --no-fund
+      - name: Unit tests
+        run: |
+          npm test
+      - name: JavaScript files parse
+        run: |
+          for f in $(git ls-files '*.js' | grep -v potree_libs); do node --check "$f" || exit 1; done
+      - name: Shell scripts pass shellcheck
+        run: |
+          git ls-files -z '*.sh' | xargs -0 -r shellcheck -S warning
+      - name: Python files parse
+        run: |
+          git ls-files -z '*.py' | xargs -0 -r python3 -m py_compile

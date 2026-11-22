@@ -1,0 +1,35 @@
+# Security checks: committed secrets and known-vulnerable dependencies.
+# Runs on every push and every Monday morning, because a dependency can become
+# vulnerable without any change in this repo. Kept separate from check.yml so a
+# new advisory does not hide whether the code itself still works.
+name: security
+on:
+  push:
+  schedule:
+    - cron: '17 3 * * 1'
+jobs:
+  secrets:
+    name: no secrets in the history
+    runs-on: host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (whole history, rules in .gitleaks.toml)
+        run: |
+          gitleaks git . --redact --no-banner
+  dependencies:
+    name: no known-vulnerable dependencies
+    runs-on: host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node 24 (same as the live server)
+        run: |
+          echo /opt/node24/bin >> "$GITHUB_PATH"
+      - name: npm audit
+        if: always()
+        run: |
+          # fails on high or critical advisories
+          npm audit --audit-level=high

@@ -1,0 +1,37 @@
+# opcviewer: .htaccess for the web root (installed as <www>/.htaccess). Applies to every
+# project folder below it. Needs AllowOverride FileInfo Options=Indexes (apache-site.conf).
+
+# 1. CORS Headers (Crucial for 3D data)
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Range"
+    Header set Accept-Ranges bytes
+</IfModule>
+
+# 2. File Types
+<IfModule mod_mime.c>
+    AddType application/json .json
+    AddType application/octet-stream .bin
+    AddType application/octet-stream .las
+    AddType application/octet-stream .laz
+</IfModule>
+
+# 3. No caching of pages, metadata and scripts
+# This forces the browser to check for new files every single time.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|json|js)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+</IfModule>
+
+# 4. Disable ETag (Prevents stale validation)
+<IfModule mod_headers.c>
+    Header unset ETag
+</IfModule>
+FileETag None
+
+# 5. No directory listings. The site root has its own index.html (web/landing.html).
+Options -Indexes

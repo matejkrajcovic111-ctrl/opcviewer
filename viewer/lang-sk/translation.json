@@ -1,0 +1,106 @@
+{
+	"tb": {
+		"navigation_opt": "Navigácia",
+		"rendering_opt": "Vzhľad",
+		"tools_opt": "Nástroje",
+		"measurments_opt": "Merania",
+		"clipping_opt": "Orezávanie",
+		"annotations_opt": "Poznámky",
+		"materials_opt": "Materiály",
+		"scene_opt": "Scéna",
+		"classification_filter_opt": "Filter klasifikácie",
+		"filters_opt": "Filtre",
+		"parameters_opt": "Ďalšie nastavenia",
+		"about_opt": "O aplikácii"
+	},
+	"tt": {
+		"angle_measurement": "Meranie uhla",
+		"point_measurement": "Súradnice bodu",
+		"distance_measurement": "Meranie vzdialenosti",
+		"height_measurement": "Meranie výšky",
+		"circle_measurement": "Meranie kružnice",
+		"area_measurement": "Meranie plochy",
+		"volume_measurement": "Meranie objemu",
+		"height_profile": "Výškový profil",
+		"annotation": "Poznámka",
+		"clip_volume": "Orezanie kvádrom",
+		"clip_polygon": "Orezanie polygónom",
+		"screen_clip_box": "Nakreslite výberový obdĺžnik. Vyžaduje ortografickú kameru!",
+		"clip_plane_x": "Orezávacia rovina v osi x",
+		"clip_plane_y": "Orezávacia rovina v osi y",
+		"clip_plane_z": "Orezávacia rovina v osi z",
+		"remove_all_measurement": "Odstrániť všetky merania",
+		"left_view_control": "Pohľad zľava",
+		"right_view_control": "Pohľad sprava",
+		"front_view_control": "Pohľad spredu",
+		"back_view_control": "Pohľad zozadu",
+		"top_view_control": "Pohľad zhora",
+		"bottom_view_control": "Pohľad zdola",
+		"focus_control": "Zobraziť všetko",
+		"orbit_control": "Otáčanie okolo bodu",
+		"flight_control": "Voľný let",
+		"heli_control": "Ovládanie ako vrtuľník",
+		"earth_control": "Ovládanie ako mapa",
+		"perspective_camera_control": "Perspektívna kamera",
+		"orthographic_camera_control": "Ortografická kamera",
+		"navigation_cube_control": "Navigačná kocka",
+		"remove_all_clipping_volumes": "Odstrániť všetky orezania",
+		"compass": "Kompas",
+		"camera_animation": "Animácia kamery"
+	},
+	"appearance": {
+		"nb_max_pts": "Počet bodov",
+		"point_size": "Veľkosť bodu",
+		"min_point_size": "Minimálna veľkosť",
+		"point_opacity": "Priehľadnosť",
+		"field_view": "Zorné pole",
+		"point_size_type": "Určenie veľkosti bodu",
+		"point_material": "Materiály",
+		"elevation_range": "Rozsah výšok",
+		"extra_range": "Rozsah hodnôt",
+		"point_quality": "Kvalita",
+		"point_shape": "Tvar",
+		"edl_radius": "Polomer",
+		"edl_strength": "Sila",
+		"edl_opacity": "Priehľadnosť",
+		"edl_enable": "Zapnúť",
+		"min_node_size": "Min. veľkosť uzla",
+		"clip_mode": "Režim orezania",
+		"move_speed": "Rýchlosť",
+		"skybox": "Obloha",
+		"bottom_lock": "Držať nad terénom",
+		"box": "Ohraničenie",
+		"length_unit": "Jednotka dĺžky",
+		"freeze": "Uzamknúť pohľad",
+		"language": "Jazyk",
+		"backface_culling": "Skryť odvrátené plochy"
+	},
+	"measurements": {
+		"clip": "orezať",
+		"show": "zobraziť objem"
+	},
+	"annotations": {
+		"show3D": "zobraziť v 3D",
+		"showMap": "zobraziť na mape"
+	},
+	"profile": {
+		"nb_points": "Počet bodov",
+		"title": "Výškový profil",
+		"save_las": "Uložiť LAS (3D)",
+		"save_ortho": "Uložiť CSV (2D)"
+	},
+	"scene": {
+		"camera_position": "Poloha kamery",
+		"camera_target": "Cieľ kamery"
+	},
+	"filters": {
+		"return_number": "Číslo odrazu",
+		"number_of_returns": "Počet odrazov",
+		"gps_min": "min",
+		"gps_max": "max",
+		"gps_time": "GPS čas"
+	},
+	"settings": {
+		"language": "Jazyk"
+	}
+}

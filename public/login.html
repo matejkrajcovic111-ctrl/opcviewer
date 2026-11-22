@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opcviewer - Login</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link rel="stylesheet" href="/login-style.css">
+</head>
+<body>
+  <div class="card">
+    <img src="/logo.svg" alt="" class="login-logo">
+    <h1 id="heading">Sign in</h1>
+    <p class="sub" id="subheading">opcviewer</p>
+    <div class="error" id="error"></div>
+    <form id="form">
+      <div id="codeRow" hidden>
+        <label for="code">Setup code (printed by the installer)</label>
+        <input type="text" id="code" autocomplete="off" spellcheck="false">
+      </div>
+      <label for="password" id="passwordLabel">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+      <button type="submit" id="submitBtn">Sign in</button>
+    </form>
+  </div>
+  <script src="/login.js"></script>
+</body>
+</html>

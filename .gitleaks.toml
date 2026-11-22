@@ -1,0 +1,8 @@
+# Rules for the secret scan in .gitea/workflows/security.yml.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sshpass-literal-password"
+description = "Password written on an sshpass command line"
+regex = '''sshpass\s+-p\s*['"]?([^\s'"$]{4,})'''
