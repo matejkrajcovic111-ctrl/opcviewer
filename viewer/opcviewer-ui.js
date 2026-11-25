@@ -257,6 +257,11 @@
 	}
 	window.zmNavCubeViewport = navCubeViewport;
 
+	// How far down (client px) the Bounding Box button/panel, cube and compass reach; the
+	// OSNAP bar keeps clear of them.
+	var stackBottom = 0;
+	window.zmTopRightBottom = function () { return stackBottom; };
+
 	function placeNavCube(viewer) {
 		var r = viewer.renderer, area = viewer.renderArea;
 		if (!r || !area || r.__zmCube) return;
@@ -275,10 +280,14 @@
 			var rect = bb ? bb.getBoundingClientRect() : null;
 			offset = rect && rect.height ? Math.max(0, Math.round(rect.bottom - top + 6)) : 0;
 			var cube = viewer.navigationCube;
+			var bottom = rect && rect.height ? rect.bottom : 0;
+			if (cube && cube.visible) bottom = Math.max(bottom, top + offset + cube.width);
 			if (viewer.compass && viewer.compass.dom) {
 				var c = (offset || 10) + (cube && cube.visible ? cube.width + 16 : 0); // room for its rotated corners
 				viewer.compass.dom.css('top', c + 'px');
+				if (viewer.compass.isVisible && viewer.compass.isVisible()) bottom = Math.max(bottom, top + c + 64 + 14);
 			}
+			stackBottom = bottom;
 		});
 		// Potree picks cube faces from clientY as if the cube were at the top: a click on the
 		// moved cube is handed on with clientY shifted, and the old corner no longer reacts.
@@ -1007,6 +1016,9 @@
 				window.zmVolumeOf = function (measure) { computeVolume(v, measure); };
 				buildToolbar(v);
 				placeNavCube(v);
+				loadScript('opcviewer-osnap.js', function () {
+					if (window.zmOsnap) window.zmOsnap.attach(v, function () { return current; });
+				});
 				startLoadReport(v);
 			}
 			if (!guiDone && document.getElementById('potree_languages') && document.getElementById('potree_languages').children.length) {
