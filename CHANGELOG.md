@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.2.2 – 2026-11-25
+
+### Changed
+- **Left-drag rotates while measuring.** With a point not yet placed, dragging with the left button turns the view and you keep measuring; a left click without moving still places the point. A click's small hand movement (up to 3 px) no longer nudges the view.
+
 ## 2.2.1 – 2026-11-25
 
 ### Changed

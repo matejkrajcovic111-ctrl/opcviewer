@@ -422,10 +422,11 @@
 			}
 		}, false);
 
-		// Right-drag pans the view while a point is being placed (any measuring tool); a
-		// right-click without moving still finishes the measurement. Potree keeps the point
-		// being placed "grabbed" (inputHandler.drag), so its camera controls never see a drag:
-		// for a right press the camera gets a fresh drag, and the point is grabbed again after.
+		// While a point is being placed (any measuring tool), dragging with the left button
+		// rotates and with the right button pans the view; a click without moving still places
+		// the point (left) or finishes the measurement (right). Potree keeps the point being
+		// placed "grabbed" (inputHandler.drag), so its camera controls never see a drag: for
+		// the press the camera gets a fresh drag, and the point is grabbed again after.
 		var canvas = viewer.renderer.domElement, pan = null;
 		var placingSphere = function () {
 			var m = current, ih = viewer.inputHandler;
@@ -441,29 +442,33 @@
 			if (current === p.m && viewer.scene.measurements.indexOf(p.m) >= 0) viewer.inputHandler.startDragging(p.sphere);
 		};
 		area.addEventListener('mousedown', function (e) { // capture: before Potree
-			if (e.button !== 2 || e.target !== canvas) return;
+			if ((e.button !== 0 && e.button !== 2) || e.target !== canvas) return;
 			var sp = placingSphere();
 			if (!sp) return;
-			pan = { m: current, sphere: sp, drag: viewer.inputHandler.drag, x: e.clientX, y: e.clientY, moved: false };
+			pan = { button: e.button, m: current, sphere: sp, drag: viewer.inputHandler.drag, x: e.clientX, y: e.clientY, moved: false };
 			viewer.inputHandler.drag = null; // so Potree's own mousedown starts a camera drag
 		}, true);
 		area.addEventListener('mousedown', function (e) { // bubble: after Potree
-			if (!pan || e.button !== 2) return;
+			if (!pan || e.button !== pan.button) return;
 			var ih = viewer.inputHandler;
 			// the point sits under the cursor and Potree may have grabbed it again
 			if (!ih.drag || ih.drag.object) ih.startDragging(null);
 		}, false);
 		window.addEventListener('mousemove', function (e) {
-			if (pan && !pan.moved && Math.abs(e.clientX - pan.x) + Math.abs(e.clientY - pan.y) > 3) pan.moved = true;
+			if (!pan || pan.moved) return;
+			if (Math.abs(e.clientX - pan.x) + Math.abs(e.clientY - pan.y) > 3) pan.moved = true;
+			// a click's hand jitter must not turn the view: the camera only hears of the move
+			// once it is a drag (it then gets the whole distance at once)
+			else e.stopImmediatePropagation();
 		}, true);
 		area.addEventListener('mouseup', function (e) { // capture: before the measuring tool
-			if (!pan || e.button !== 2) return;
+			if (!pan || e.button !== pan.button) return;
 			if (pan.moved) {
-				// a pan, not a "finish": neither Potree's measuring tool nor the handler above
-				// act on a middle-button release
+				// a view move, not a point or a "finish": neither Potree's measuring tool nor
+				// the handler above act on a middle-button release
 				try { Object.defineProperty(e, 'button', { value: 1 }); } catch (err) { /* ignore */ }
 			} else {
-				viewer.inputHandler.drag = pan.drag; // a plain right-click: exactly as before
+				viewer.inputHandler.drag = pan.drag; // a plain click: exactly as before
 				pan = null;
 			}
 		}, true);
