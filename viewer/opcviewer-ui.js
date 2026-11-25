@@ -1006,7 +1006,13 @@
 	function computeInBrowser(viewer, poly) {
 		if (!window.zmVolumeGrid) { loadScript('opcviewer-grid.js', function () { computeInBrowser(viewer, poly); }); return; }
 		var G = window.zmVolumeGrid, grid;
-		try { grid = G.makeVolumeGrid(poly, G.cellSize(poly)); } catch (err) {
+		// A visitor's browser (a phone, too) gets a smaller grid than the server: 1.5 million
+		// cells aimed for, 4 million at most (as before 2.2.3).
+		var cell = G.cellSize(poly, 1.5e6);
+		try {
+			if (!(G.gridCells(poly, cell) <= 4e6)) throw new Error('too large');
+			grid = G.makeVolumeGrid(poly, cell);
+		} catch (err) {
 			resultEl.textContent = tr('Obrys je na výpočet objemu príliš veľký (viac ako asi 1 × 1 km).', 'The outline is too large for a volume (more than about 1 × 1 km).');
 			return;
 		}

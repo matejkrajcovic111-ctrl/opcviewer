@@ -38,11 +38,19 @@ test('the browser global and the Node export are the same functions', () => {
   for (const k of ['makeVolumeGrid', 'cellSize', 'refine']) assert.strictEqual(typeof browser[k], 'function', k);
 });
 
-test('cellSize follows the 400-across rule and its limits', () => {
+test('cellSize: 5 cm, finer for small outlines, coarser only when the grid would not fit', () => {
   const sq = (w) => [{ x: 0, y: 0, z: 0 }, { x: w, y: 0, z: 0 }, { x: w, y: w, z: 0 }, { x: 0, y: w, z: 0 }];
-  assert.ok(Math.abs(shared.cellSize(sq(100)) - 0.25) < 1e-12);
-  assert.strictEqual(shared.cellSize(sq(2)), 0.01);
-  assert.strictEqual(shared.cellSize(sq(2000)), 0.5);
+  const near = (a, b) => Math.abs(a - b) < 1e-12;
+  assert.strictEqual(shared.cellSize(sq(2)), 0.01); // 400 across, at least 1 cm
+  assert.ok(near(shared.cellSize(sq(10)), 0.025)); // small piles keep their finer grid
+  assert.strictEqual(shared.cellSize(sq(100)), 0.05); // was 25 cm
+  assert.strictEqual(shared.cellSize(sq(200)), 0.05); // 40,000 m2 still at 5 cm
+  assert.ok(near(shared.cellSize(sq(300)), 0.075)); // 16 million cells is the most
+  assert.ok(shared.gridCells(sq(300), shared.cellSize(sq(300))) <= shared.MAX_CELLS);
+  assert.strictEqual(shared.cellSize(sq(2000)), 0.5); // never coarser than 50 cm
+  // the browser fallback asks for a smaller grid
+  assert.ok(near(shared.cellSize(sq(100), 1.5e6), Math.sqrt(1e4 / 1.5e6)));
+  assert.strictEqual(shared.cellSize(sq(10), 1.5e6), 0.025);
 });
 
 test('refine makes the grid coarser while the scan is too sparse for it', () => {
@@ -54,7 +62,7 @@ test('refine makes the grid coarser while the scan is too sparse for it', () => 
   assert.ok(Math.abs(result.above - 144) / 144 < 0.02, `above ${result.above}`);
 });
 
-test('the grid itself refuses to allocate more than 4 million cells', () => {
+test('the grid itself refuses to allocate more than its cell limit', () => {
   const line = [{ x: 0, y: 0, z: 0 }, { x: 1e9, y: 0, z: 0 }, { x: 2e9, y: 0, z: 0 }];
   assert.throws(() => shared.makeVolumeGrid(line, 0.01), /too large/);
   assert.throws(() => browser(line, 0.01), /too large/);

@@ -16,8 +16,11 @@
 })(typeof window !== 'undefined' ? window : this, function () {
 	'use strict';
 
-	// No grid is ever larger than this (4 million cells = about 1 km x 1 km at 50 cm).
-	var MAX_CELLS = 4e6;
+	// Cells cellSize() aims for at most (5 cm over ~40,000 m2; one grid needs ~850 MB on the
+	// server, which runs one volume at a time), and the hard limit with room for rounding
+	// up (about 2 km x 2 km at 50 cm).
+	var FIT_CELLS = 16e6;
+	var MAX_CELLS = 16.5e6;
 
 	// 2.5D volume: a grid of cells over the outlined area, each holding the mean height of
 	// the points that fall in it, measured against a plane fitted through the clicked
@@ -141,16 +144,17 @@
 		};
 	}
 
-	// Grid cell size for an outline: about 400 cells across the outlined area, between 1 cm
-	// and 50 cm, and never more than ~1.5 million cells over the outline's bounding rectangle.
-	function cellSize(poly) {
+	// Grid cell size for an outline: 5 cm (finer for small outlines: about 400 cells across,
+	// at least 1 cm), coarser only where the bounding rectangle would need more than
+	// maxCells (default FIT_CELLS), never coarser than 50 cm.
+	function cellSize(poly, maxCells) {
 		var area = 0, i, j, bw = 0, bh = 0;
 		for (i = 0, j = poly.length - 1; i < poly.length; j = i++) area += (poly[j].x + poly[i].x) * (poly[j].y - poly[i].y);
 		area = Math.abs(area / 2);
 		for (i = 0; i < poly.length; i++) for (j = 0; j < poly.length; j++) {
 			bw = Math.max(bw, Math.abs(poly[i].x - poly[j].x)); bh = Math.max(bh, Math.abs(poly[i].y - poly[j].y));
 		}
-		return Math.min(0.5, Math.max(0.01, Math.sqrt(area) / 400, Math.sqrt(bw * bh / 1.5e6)));
+		return Math.min(0.5, Math.max(0.01, Math.min(0.05, Math.sqrt(area) / 400), Math.sqrt(bw * bh / (maxCells || FIT_CELLS))));
 	}
 
 	// Finishes a filled grid. If it is finer than the scan itself, many cells are empty:

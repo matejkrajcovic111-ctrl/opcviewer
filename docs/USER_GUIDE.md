@@ -145,7 +145,7 @@ For stockpiles and excavations. Choose **Volume**, click around the foot of the 
 
 The base is a plane fitted through the points you clicked, so click on the ground around the pile, not on the pile. The counted area is shown on the model: green where the surface is above the base, red where it is below, with dug-out space drawn as a solid red block. Move a point of the outline and the volume is recalculated.
 
-How it is computed: the outline is divided into about 400 × 400 cells. Each cell takes the mean height of its points, and the cells are summed against the base plane. Empty cells are filled from their neighbours, and the panel warns when more than 5 % had to be filled. This suits piles and pits. Anything with several surfaces over the same spot (overhangs, roofs, trees over the pile) comes out wrong. Remove such areas from the outline, or measure them another way. On synthetic shapes with a known answer it agrees within 0.5 %.
+How it is computed: the outline is divided into 5 cm cells (smaller still for small piles; outlines larger than about 40 000 m² get the finest size that fits, and a scan with fewer points than that gets a coarser grid automatically; the panel shows the size used). Each cell takes the mean height of its points, and the cells are summed against the base plane. Empty cells are filled from their neighbours, and the panel warns when more than 5 % had to be filled. This suits piles and pits. Anything with several surfaces over the same spot (overhangs, roofs, trees over the pile) comes out wrong. Remove such areas from the outline, or measure them another way. On synthetic shapes with a known answer it agrees within 0.5 %.
 
 ### Bounding Box
 

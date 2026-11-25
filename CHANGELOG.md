@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.2.3 – 2026-11-25
+
+### Changed
+- **Volume grid 5 cm** (was about 400 cells across the outline, up to 50 cm). Small piles that already got a finer grid keep it, so their results don't change; larger outlines now come out finer and their numbers move slightly. Outlines over about 40 000 m² get the finest size that fits in 16 million cells; a scan sparser than the grid still makes it coarser automatically. The browser fallback stays at its earlier size (1.5 million cells). The coloured highlight is still drawn from at most 250 000 cells, so it stays smooth on phones; the numbers use the full grid.
+
 ## 2.2.2 – 2026-11-25
 
 ### Changed
