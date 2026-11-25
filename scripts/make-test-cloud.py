@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the synthetic LAS file behind test/fixtures/octree-*: 20 000 points of a cone
 (radius 5 m, height 3 m) standing on flat ground, 14 x 14 m, at national-grid-sized
-coordinates. Its volume is known (pi * 25 * 3 / 3 = 23.562 m3), so the server-side volume
+coordinates. Its volume is known (pi * 5^2 * 3 / 3 = 78.540 m3), so the server-side volume
 can be checked end to end. Convert with PotreeConverter 2.1.2, once with the default
 encoding and once with --encoding BROTLI.
 

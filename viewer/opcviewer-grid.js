@@ -115,6 +115,7 @@
 				return {
 					above: above * ca, below: below * ca, area: insideCount * ca, maxHeight: maxH, maxDepth: maxD,
 					cell: cell, points: used, emptyShare: insideCount ? empty / insideCount : 0,
+					plane: { cx: cx, cy: cy, cz: cz, a: a, b: b },
 					// per-cell data for the highlight: height above the base plane (h), which
 					// cells count (has), and what is needed to place them in the world
 					cells: { nx: nx, ny: ny, minX: minX, minY: minY, h: h, has: has, inside: inside,
