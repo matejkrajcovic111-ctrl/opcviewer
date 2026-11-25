@@ -23,6 +23,7 @@ class Node {
   addEventListener(t, fn) { (this.listeners[t] = this.listeners[t] || []).push(fn); }
   get innerHTML() { return this.children.map((c) => (c.text !== undefined ? esc(c.text) : c.outerHTML)).join(''); }
   get outerHTML() { const t = this.tagName.toLowerCase(); return `<${t}${this.attrs.map(([k, v]) => ` ${k}="${escAttr(v)}"`).join('')}>${this.innerHTML}</${t}>`; }
+  get nextElementSibling() { const sib = this.parentNode ? this.parentNode.children.filter((c) => c.tagName) : []; return sib[sib.indexOf(this) + 1] || null; }
   all() { return this.children.filter((c) => c.tagName).flatMap((c) => [c, ...c.all()]); }
 }
 

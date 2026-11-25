@@ -205,22 +205,95 @@
 		if (cap && cap !== tools && !cap.classList.contains('divider') && cap.id !== 'tools') hide(cap);
 	}
 
-	function rebuildSidebarLanguages() {
-		var el = document.getElementById('potree_languages');
-		if (!el || el.getAttribute('data-zm') === '1' || !el.children.length) return false;
-		el.setAttribute('data-zm', '1');
-		el.innerHTML = '';
-		[['SK', 'sk'], ['EN', 'en'], ['DE', 'de'], ['FR', 'fr'], ['ES', 'es'], ['JP', 'jp'], ['SE', 'se']]
-			.forEach(function (d, i) {
-				var a = document.createElement('a');
-				a.textContent = d[0];
-				a.style.cursor = 'pointer';
-				if (i === 0) a.style.marginLeft = '30px';
-				a.addEventListener('click', function () { setLang(d[1]); });
-				el.appendChild(a);
-				if (i < 6) el.appendChild(document.createTextNode(' - '));
-			});
+	// Potree's sidebar, once Potree has built it (its language list is filled last): the header
+	// shows opcviewer and its version instead of Potree's links; the language list (our toolbar
+	// has SK/EN), the About panel and the "Box" / "Lock view" options are taken out.
+	// info = {version, sourceUrl} from branding.json. Returns false while the sidebar isn't there.
+	function cleanSidebar(doc, info) {
+		var langs = doc.getElementById('potree_languages');
+		var brand = doc.getElementById('potree_branding');
+		if (!brand || !langs || !langs.children.length) return false;
+		var drop = function (el) { if (el && el.parentNode) el.parentNode.removeChild(el); };
+		while (brand.children.length) brand.removeChild(brand.children[0]);
+		var a = doc.createElement('a');
+		a.textContent = 'opcviewer';
+		a.target = '_blank';
+		a.rel = 'noopener';
+		var src = info && info.sourceUrl ? String(info.sourceUrl).replace(/\/+$/, '') : 'https://github.com/matejkrajcovic111-ctrl/opcviewer';
+		a.href = info && info.version ? src + '/releases/tag/v' + info.version : src;
+		brand.appendChild(a);
+		if (info && info.version) {
+			brand.appendChild(doc.createTextNode(' '));
+			var v = doc.createElement('span');
+			v.className = 'zm-version';
+			v.textContent = 'v' + info.version;
+			// the header is a flex row (no visible spaces): Potree's own version styling
+			v.style.marginLeft = '6px'; v.style.color = '#9AA1A4'; v.style.fontSize = '80%';
+			brand.appendChild(v);
+		}
+		drop(langs);
+		var about = doc.getElementById('menu_about');
+		if (about) { drop(about.nextElementSibling); drop(about); }
+		['show_bounding_box', 'set_freeze'].forEach(function (id) {
+			var input = doc.getElementById(id);
+			if (!input) return;
+			input.checked = false;
+			var li = input;
+			while (li && li.tagName !== 'LI') li = li.parentNode;
+			drop(li || input);
+		});
 		return true;
+	}
+	window.zmCleanSidebar = cleanSidebar;
+
+	// ---------------------------------------------------------------- navigation cube, compass
+
+	// Potree draws the cube in the top-right corner, where the Bounding Box button is. Its
+	// viewport is moved down by offsetTop (WebGL counts y from the bottom); every other
+	// viewport is passed through unchanged.
+	function navCubeViewport(x, y, w, h, width, height, offsetTop) {
+		if (offsetTop > 0 && w === h && w !== width && x === width - w && y === height - w) return [x, y - offsetTop, w, h];
+		return [x, y, w, h];
+	}
+	window.zmNavCubeViewport = navCubeViewport;
+
+	function placeNavCube(viewer) {
+		var r = viewer.renderer, area = viewer.renderArea;
+		if (!r || !area || r.__zmCube) return;
+		r.__zmCube = true;
+		var offset = 0; // px from the top of the render area to the cube
+		var orig = r.setViewport.bind(r);
+		r.setViewport = function (x, y, w, h) {
+			var f = viewer.scaleFactor || 1;
+			var v = navCubeViewport(x, y, w, h, f * area.clientWidth, f * area.clientHeight, f * offset);
+			return orig(v[0], v[1], v[2], v[3]);
+		};
+		// Below the Bounding Box button, or its panel while that is open; the compass below the cube.
+		viewer.addEventListener('update', function () {
+			var bb = document.getElementById('zm-bbox');
+			var top = area.getBoundingClientRect().top;
+			var rect = bb ? bb.getBoundingClientRect() : null;
+			offset = rect && rect.height ? Math.max(0, Math.round(rect.bottom - top + 6)) : 0;
+			var cube = viewer.navigationCube;
+			if (viewer.compass && viewer.compass.dom) {
+				var c = (offset || 10) + (cube && cube.visible ? cube.width + 16 : 0); // room for its rotated corners
+				viewer.compass.dom.css('top', c + 'px');
+			}
+		});
+		// Potree picks cube faces from clientY as if the cube were at the top: a click on the
+		// moved cube is handed on with clientY shifted, and the old corner no longer reacts.
+		area.addEventListener('mousedown', function (e) {
+			var cube = viewer.navigationCube;
+			if (!cube || !cube.visible || !offset) return;
+			if (e.clientX - (window.innerWidth - cube.width) < 0) return;
+			var y = e.clientY - area.getBoundingClientRect().top;
+			if (y >= offset && y <= offset + cube.width) {
+				try { Object.defineProperty(e, 'clientY', { value: e.clientY - offset }); } catch (err) { /* ignore */ }
+			} else if (y <= cube.width) {
+				cube.visible = false;
+				setTimeout(function () { cube.visible = true; }, 0);
+			}
+		}, true);
 	}
 
 	// ---------------------------------------------------------------- measuring toolbar
@@ -293,8 +366,6 @@
 	// (Browsers used to run the two handlers in the opposite order.) Pick the point back up
 	// once all of Potree's handlers have run.
 	function hookMeasuring(viewer) {
-		// For tests and scripts: calculate the volume of a given outline measurement.
-		window.zmComputeVolume = function (m) { computeVolume(viewer, m); };
 		var tool = viewer.measuringTool;
 		var orig = tool.startInsertion;
 		tool.startInsertion = function (args) {
@@ -935,11 +1006,18 @@
 				hookMeasuring(v);
 				window.zmVolumeOf = function (measure) { computeVolume(v, measure); };
 				buildToolbar(v);
+				placeNavCube(v);
 				startLoadReport(v);
 			}
-			if (!guiDone && rebuildSidebarLanguages()) {
+			if (!guiDone && document.getElementById('potree_languages') && document.getElementById('potree_languages').children.length) {
 				guiDone = true;
 				hideSidebarMeasuring();
+				(window.opcvBrandingReady || Promise.resolve({})).then(function (b) {
+					cleanSidebar(document, b || {});
+					// Their switches are gone: make sure they are off.
+					if (v.setShowBoundingBox) v.setShowBoundingBox(false);
+					if (v.setFreeze) v.setFreeze(false);
+				});
 				applyLanguage();
 				// Sidebar panels are built lazily (object properties etc.): keep them translated.
 				var sidebar = document.getElementById('potree_sidebar_container');
