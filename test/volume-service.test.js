@@ -121,3 +121,17 @@ test('a worker that cannot start fails that request and the service keeps answer
   await assert.rejects(svc.run('x', {}), (e) => e.status === 500);
   await assert.rejects(svc.run('x', {}), (e) => e.status === 500); // not stuck as "running"
 });
+
+test('a cancelled job keeps the slot until its worker has really stopped', async () => {
+  const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'opcv-block-')), 'log');
+  const svc = createVolumeService({ workerFile: path.join(__dirname, 'helpers', 'blocking-volume-worker.js') });
+  const stop = new AbortController();
+  const a = svc.run('x', { log, name: 'a', seconds: 1 }, stop.signal).catch((e) => e.status);
+  setTimeout(() => stop.abort(), 300);
+  assert.strictEqual(await a, 499); // the visitor gets their answer at once
+  await svc.run('x', { log, name: 'b', seconds: 0.1 });
+  const t = Object.fromEntries(fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => { const [ev, n, ms] = l.split(' '); return [`${ev} ${n}`, +ms]; }));
+  // a's worker is stuck in a 1 s native call; it can only stop once that returns
+  const aStops = t['start a'] + 950;
+  assert.ok(t['start b'] >= aStops, `b started ${aStops - t['start b']} ms before a's worker could stop`);
+});

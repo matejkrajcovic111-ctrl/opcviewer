@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.1.1 – 2026-11-25
+
+### Security
+- A cancelled volume calculation keeps its slot until its worker has really stopped. Before, a visitor who disconnected freed the slot at once while the old worker could still be busy in a file read, so repeated request-and-disconnect could run several calculations at the same time.
+
 ## 2.1.0 – 2026-11-25
 
 ### Added
