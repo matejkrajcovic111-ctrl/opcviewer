@@ -80,3 +80,14 @@ test('before Apache is installed, port 80 must be free even for another port (th
   assert.match(r.err, /port 80.*nginx/);
   assert.ok(preflight(fakeBox({}), 8080, '80:apache2').ok);
 });
+
+test('Apache is pointed at the admin port from the existing settings file on an update', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'opcv-env-'));
+  const env = path.join(dir, 'opcviewer.env');
+  const run = (file) => spawnSync('bash', ['-c', 'OPCV_SOURCE_ONLY=1 . "$1"; OPCV_ADMIN_PORT=3300; admin_port "$2"', 'x', SCRIPT, file], { encoding: 'utf8' }).stdout.trim();
+  assert.strictEqual(run(env), '3300'); // first install: no settings file yet
+  fs.writeFileSync(env, '# settings\nOPCV_PORT=8123\nOPCV_HOST=0.0.0.0\n');
+  assert.strictEqual(run(env), '8123');
+  fs.writeFileSync(env, 'OPCV_PORT=80; rm -rf /\n');
+  assert.strictEqual(run(env), '3300'); // anything but a plain number is ignored
+});

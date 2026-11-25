@@ -79,6 +79,12 @@ check_port() {
   fi
 }
 
+admin_port() { # the admin panel's port: from the settings file if it exists (an update), else OPCV_ADMIN_PORT
+  local p=""
+  [ -f "$1" ] && p=$(sed -n 's/^OPCV_PORT=\([0-9][0-9]*\)[[:space:]]*$/\1/p' "$1" | tail -n1)
+  printf '%s\n' "${p:-$OPCV_ADMIN_PORT}"
+}
+
 # Everything below runs only when the script is executed, not when it is sourced for tests
 # (OPCV_SOURCE_ONLY=1). Being one function also means a download cut short runs nothing.
 main() {
@@ -173,9 +179,9 @@ say "Setting up Apache on port $OPCV_HTTP_PORT"
 site=/etc/apache2/sites-available/opcviewer.conf
 {
   [ "$OPCV_HTTP_PORT" = 80 ] || echo "Listen $OPCV_HTTP_PORT"
-  sed -e "s#{{WWW}}#$OPCV_WWW#g" -e "s#{{PORT}}#$OPCV_ADMIN_PORT#g" -e "s#<VirtualHost \*:80>#<VirtualHost *:$OPCV_HTTP_PORT>#" "$APP/web/apache-site.conf"
+  sed -e "s#{{WWW}}#$OPCV_WWW#g" -e "s#{{PORT}}#$(admin_port "$ENV_FILE")#g" -e "s#<VirtualHost \*:80>#<VirtualHost *:$OPCV_HTTP_PORT>#" "$APP/web/apache-site.conf"
 } > "$site"
-a2enmod -q headers mime >/dev/null
+a2enmod -q headers mime proxy proxy_http >/dev/null
 a2ensite -q opcviewer >/dev/null
 [ "$OPCV_HTTP_PORT" != 80 ] || a2dissite -q 000-default >/dev/null 2>&1 || true
 
