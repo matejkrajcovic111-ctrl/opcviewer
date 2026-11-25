@@ -48,3 +48,10 @@ test('thumbnails open project pages at OPCV_LOCAL_URL (default http://127.0.0.1)
   assert.strictEqual(loadConfig({}).LOCAL_URL, 'http://127.0.0.1');
   assert.strictEqual(loadConfig({ OPCV_LOCAL_URL: 'http://127.0.0.1:8080/' }).LOCAL_URL, 'http://127.0.0.1:8080');
 });
+
+test('the source link defaults to the public repository and can be changed', () => {
+  const { spawnSync } = require('child_process');
+  const get = (env) => spawnSync(process.execPath, ['-e', 'console.log(require("./lib/config").SOURCE_URL)'], { cwd: require('path').join(__dirname, '..'), env: { ...process.env, ...env }, encoding: 'utf8' }).stdout.trim();
+  assert.strictEqual(get({ OPCV_SOURCE_URL: '' }), 'https://github.com/matejkrajcovic111-ctrl/opcviewer');
+  assert.strictEqual(get({ OPCV_SOURCE_URL: 'https://git.example/me/opcviewer/' }), 'https://git.example/me/opcviewer');
+});

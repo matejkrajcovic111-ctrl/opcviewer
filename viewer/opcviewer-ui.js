@@ -365,6 +365,8 @@
 		renderVolumeResult();
 		var guide = document.querySelector('#zm-branding .zm-guide');
 		if (guide) guide.textContent = tr('Návod na použitie', 'User guide');
+		var tag = document.querySelector('#zm-branding .zm-name');
+		if (tag && window.opcvTagline) tag.textContent = ' · ' + window.opcvTagline(lang === 'sk' ? 'sk' : 'en');
 	}
 
 	function buildToolbar(viewer) {

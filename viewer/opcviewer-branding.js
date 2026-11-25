@@ -6,7 +6,7 @@
 	'use strict';
 	if (window.opcvBrandingReady) return;
 
-	var DEFAULTS = { name: '', tagline: '', url: '', guideUrl: '', lang: 'en', accent: '#4c8dff', logo: null, icons: [] };
+	var DEFAULTS = { name: '', tagline: '', taglineEn: '', url: '', guideUrl: '', lang: 'en', accent: '#4c8dff', logo: null, icons: [] };
 	var LIBS = '../potree_libs/';
 	var DEFAULT_HOVER = { '#4c8dff': '#3a78e6' };
 
@@ -53,6 +53,12 @@
 		return a;
 	}
 
+	// The badge's second line in a language: the English one on English pages when set.
+	function taglineFor(b, lang) {
+		return lang === 'en' && b.taglineEn ? b.taglineEn : b.tagline;
+	}
+	window.opcvTagline = function (lang) { return taglineFor(window.opcvBranding, lang); };
+
 	function injectBadge(b) {
 		if (!b.name && !b.logo) return;
 		if (document.getElementById('zm-branding')) return;
@@ -92,10 +98,11 @@
 			site.appendChild(img);
 		}
 		if (b.name) site.appendChild(document.createTextNode(b.name));
-		if (b.tagline) {
+		var tagline = taglineFor(b, lang);
+		if (tagline) {
 			var t = document.createElement('span');
 			t.className = 'zm-name';
-			t.textContent = ' · ' + b.tagline;
+			t.textContent = ' · ' + tagline;
 			site.appendChild(t);
 		}
 		box.appendChild(site);
@@ -124,6 +131,8 @@
 		if (json && typeof json === 'object') {
 			for (var j in DEFAULTS) if (json[j] !== undefined && json[j] !== null) b[j] = json[j];
 			if (json.logo === null) b.logo = null;
+			if (typeof json.version === 'string') b.version = json.version;
+			if (typeof json.sourceUrl === 'string' && /^https?:\/\//.test(json.sourceUrl)) b.sourceUrl = json.sourceUrl;
 		}
 		if (b.lang !== 'sk' && b.lang !== 'en') b.lang = DEFAULTS.lang;
 		if (!Array.isArray(b.icons)) b.icons = [];

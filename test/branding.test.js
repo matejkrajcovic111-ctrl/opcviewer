@@ -17,7 +17,7 @@ const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(
 
 test('with nothing saved, branding is the plain default', () => {
   assert.deepStrictEqual(branding.load(), branding.DEFAULTS);
-  assert.deepStrictEqual(branding.DEFAULTS, { name: '', tagline: '', url: '', guideUrl: '', lang: 'en', accent: '#4c8dff', logo: null, icons: [] });
+  assert.deepStrictEqual(branding.DEFAULTS, { name: '', tagline: '', taglineEn: '', url: '', guideUrl: '', lang: 'en', accent: '#4c8dff', logo: null, icons: [] });
 });
 
 test('valid input is trimmed and accepted', () => {
@@ -119,4 +119,20 @@ test('Apache serves SVG files in the web folder with the same script-blocking he
   assert.ok(block, 'an SVG header block guarded by IfModule mod_headers.c');
   assert.match(block[1], /Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox"/);
   assert.match(block[1], /X-Content-Type-Options "nosniff"/);
+});
+
+test('the English second line is checked and saved like the Slovak one', () => {
+  assert.strictEqual(branding.validate({ taglineEn: '  Jane Doe, surveyor ' }).taglineEn, 'Jane Doe, surveyor');
+  assert.throws(() => branding.validate({ taglineEn: 'x'.repeat(121) }), /120/);
+  branding.save(branding.validate({ name: 'Firma', tagline: 'Ján, geodet', taglineEn: 'Ján, surveyor' }));
+  assert.strictEqual(branding.load().taglineEn, 'Ján, surveyor');
+  assert.strictEqual(published().taglineEn, 'Ján, surveyor');
+});
+
+test('published branding.json carries the app version and where its source is', () => {
+  branding.publish();
+  const p = published();
+  assert.strictEqual(p.version, require('../package.json').version);
+  assert.strictEqual(p.sourceUrl, 'https://github.com/matejkrajcovic111-ctrl/opcviewer');
+  assert.strictEqual(branding.load().version, undefined); // not part of the saved settings
 });

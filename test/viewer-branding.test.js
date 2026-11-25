@@ -122,3 +122,14 @@ test('the default accent gives exactly the shades the live viewer used before', 
   const st = document.documentElement.style;
   assert.deepStrictEqual([st['--opcv-accent-hover'], st['--opcv-accent-light'], st['--opcv-accent-text']], ['#3a78e6', '#b7d1ff', '#9cc0ff']);
 });
+
+test('the second line is English when the page is English and an English one is set', async () => {
+  const both = { ...ZAMERIAMTO, taglineEn: 'Matej Krajčovič, surveyor' };
+  const name = (d) => d.getElementById('zm-branding').innerHTML.match(/<span class="zm-name">([^<]*)<\/span>/)[1];
+  assert.strictEqual(name((await page(both, 'en')).document), ' · Matej Krajčovič, surveyor');
+  assert.strictEqual(name((await page(both, 'sk')).document), ' · Matej Krajčovič, geodet');
+  assert.strictEqual(name((await page(ZAMERIAMTO, 'en')).document), ' · Matej Krajčovič, geodet');
+  const { window } = await page(both, 'sk');
+  assert.strictEqual(window.opcvTagline('en'), 'Matej Krajčovič, surveyor');
+  assert.strictEqual(window.opcvTagline('sk'), 'Matej Krajčovič, geodet');
+});

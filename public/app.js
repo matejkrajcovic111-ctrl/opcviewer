@@ -534,7 +534,7 @@ function showConversionModal(jobId, title, alreadyOpen) {
 
 // ---- branding ----
 const brandingOverlay = document.getElementById('brandingOverlay');
-const B_FIELDS = ['name', 'tagline', 'url', 'guideUrl', 'lang', 'accent'];
+const B_FIELDS = ['name', 'tagline', 'taglineEn', 'url', 'guideUrl', 'lang', 'accent'];
 let branding = null;
 
 function darken(hex, amount) {
