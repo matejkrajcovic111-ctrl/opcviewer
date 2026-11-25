@@ -53,3 +53,10 @@ test('refine makes the grid coarser while the scan is too sparse for it', () => 
   assert.ok(result.emptyShare <= 0.08 || result.cell >= 0.32);
   assert.ok(Math.abs(result.above - 144) / 144 < 0.02, `above ${result.above}`);
 });
+
+test('the grid itself refuses to allocate more than 4 million cells', () => {
+  const line = [{ x: 0, y: 0, z: 0 }, { x: 1e9, y: 0, z: 0 }, { x: 2e9, y: 0, z: 0 }];
+  assert.throws(() => shared.makeVolumeGrid(line, 0.01), /too large/);
+  assert.throws(() => browser(line, 0.01), /too large/);
+  assert.ok(shared.makeVolumeGrid(square(500), 0.5)); // 2000 x 2000 cells is fine
+});

@@ -849,8 +849,11 @@
 	// The same calculation in the browser: loads the octree nodes over the outline itself.
 	function computeInBrowser(viewer, poly) {
 		if (!window.zmVolumeGrid) { loadScript('opcviewer-grid.js', function () { computeInBrowser(viewer, poly); }); return; }
-		var G = window.zmVolumeGrid;
-		var grid = G.makeVolumeGrid(poly, G.cellSize(poly));
+		var G = window.zmVolumeGrid, grid;
+		try { grid = G.makeVolumeGrid(poly, G.cellSize(poly)); } catch (err) {
+			resultEl.textContent = tr('Obrys je na výpočet objemu príliš veľký (viac ako asi 1 × 1 km).', 'The outline is too large for a volume (more than about 1 × 1 km).');
+			return;
+		}
 		resultEl.textContent = tr('Počítam objem…', 'Calculating volume…');
 		volumeJob = gatherPoints(viewer, grid, function (st) {
 			resultEl.textContent = tr('Počítam objem… načítaných ', 'Calculating volume… ') + fmtNum(st.points, 0) + tr(' bodov', ' points read');

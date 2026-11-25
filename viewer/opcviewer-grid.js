@@ -10,10 +10,14 @@
 		fn.makeVolumeGrid = api.makeVolumeGrid;
 		fn.cellSize = api.cellSize;
 		fn.refine = api.refine;
+		fn.gridCells = api.gridCells;
 		root.zmVolumeGrid = fn;
 	}
 })(typeof window !== 'undefined' ? window : this, function () {
 	'use strict';
+
+	// No grid is ever larger than this (4 million cells = about 1 km x 1 km at 50 cm).
+	var MAX_CELLS = 4e6;
 
 	// 2.5D volume: a grid of cells over the outlined area, each holding the mean height of
 	// the points that fall in it, measured against a plane fitted through the clicked
@@ -38,6 +42,7 @@
 			b = (syz * sxx - sxz * sxy) / det;
 		}
 		var nx = Math.max(1, Math.ceil((maxX - minX) / cell)), ny = Math.max(1, Math.ceil((maxY - minY) / cell));
+		if (!(nx * ny <= MAX_CELLS)) throw new Error('The outline is too large for a volume (grid of ' + Math.round(nx * ny) + ' cells)');
 		var sum = new Float64Array(nx * ny), cnt = new Uint32Array(nx * ny), inside = new Uint8Array(nx * ny);
 		var insideCount = 0;
 		for (var iy = 0; iy < ny; iy++) {
@@ -149,5 +154,15 @@
 		return { grid: grid, result: r };
 	}
 
-	return { makeVolumeGrid: makeVolumeGrid, cellSize: cellSize, refine: refine };
+	// Cells the grid for this outline and cell size would have (as makeVolumeGrid counts them).
+	function gridCells(poly, cell) {
+		var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		for (var i = 0; i < poly.length; i++) {
+			minX = Math.min(minX, poly[i].x); maxX = Math.max(maxX, poly[i].x);
+			minY = Math.min(minY, poly[i].y); maxY = Math.max(maxY, poly[i].y);
+		}
+		return Math.max(1, Math.ceil((maxX - minX) / cell)) * Math.max(1, Math.ceil((maxY - minY) / cell));
+	}
+
+	return { makeVolumeGrid: makeVolumeGrid, cellSize: cellSize, refine: refine, gridCells: gridCells, MAX_CELLS: MAX_CELLS };
 });

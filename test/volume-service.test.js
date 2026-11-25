@@ -78,3 +78,10 @@ test('an outline whose grid would be too large is refused before any memory is u
   // a long thin outline (a road or railway) is fine: only the bounding rectangle counts
   assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: [[0, 0, 0], [5000, 0, 0], [5000, 60, 0], [0, 60, 0]] })), 200);
 });
+
+test('a flat line-shaped outline cannot slip past the grid limit', () => {
+  const line = [[0, 0, 0], [1e9, 0, 0], [2e9, 0, 0]];
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: line })), 400);
+  const thin = [[0, 0, 0], [3e6, 0, 0], [3e6, 1e-9, 0]];
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: thin })), 400);
+});
