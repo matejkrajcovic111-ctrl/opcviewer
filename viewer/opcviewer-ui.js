@@ -263,6 +263,26 @@
 		document.head.appendChild(el);
 	}
 
+	// The project's folder name from the page address (/<folder>/ or /<folder>/index.html).
+	function projectFolder(pathname) {
+		return decodeURIComponent(String(pathname).replace(/\/index\.html$/, '').replace(/^\/+|\/+$/g, '').split('/').pop() || '');
+	}
+	window.zmProjectFolder = projectFolder;
+
+	// The server's compact highlight grid (lib/volume.js) -> what showOverlay() draws from.
+	function decodeHighlight(hl, plane) {
+		var bin = atob(hl.h), bytes = new Uint8Array(bin.length), i;
+		for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+		var h = new Float32Array(bytes.buffer, 0, hl.nx * hl.ny);
+		var bits = atob(hl.mask), mask = new Uint8Array(hl.nx * hl.ny);
+		for (i = 0; i < mask.length; i++) mask[i] = (bits.charCodeAt(i >> 3) >> (i & 7)) & 1;
+		return {
+			nx: hl.nx, ny: hl.ny, minX: hl.minX, minY: hl.minY, h: h, has: mask, inside: mask,
+			baseZ: function (x, y) { return plane.cz + plane.a * (x - plane.cx) + plane.b * (y - plane.cy); }
+		};
+	}
+	window.zmDecodeHighlight = decodeHighlight;
+
 	// The measurement currently being placed (started from this toolbar or Potree's sidebar).
 	var current = null;
 	window.zmMeasuring = function () { return !!current; };
@@ -273,6 +293,8 @@
 	// (Browsers used to run the two handlers in the opposite order.) Pick the point back up
 	// once all of Potree's handlers have run.
 	function hookMeasuring(viewer) {
+		// For tests and scripts: calculate the volume of a given outline measurement.
+		window.zmComputeVolume = function (m) { computeVolume(viewer, m); };
 		var tool = viewer.measuringTool;
 		var orig = tool.startInsertion;
 		tool.startInsertion = function (args) {
@@ -729,7 +751,8 @@
 			fmtNum(r.cell * 100, 0) + ' cm, ' + fmtNum(r.points, 0) + tr(' bodov', ' points') +
 			(r.emptyShare > 0.05 ? tr('. Pozor: ', '. Note: ') + fmtNum(r.emptyShare * 100, 0) + tr(' % plochy bez bodov (doplnené z okolia)', ' % of the area had no points (filled from neighbours)') : '') +
 			(r.capped ? tr('. Výpočet bol obmedzený (veľmi veľa bodov)', '. Calculation was capped (very many points)') : '') +
-			(r.missing ? tr('. Pozor: časť dát sa nepodarilo načítať, výsledok môže byť nepresný', '. Note: some data could not be loaded, the result may be off') : '') + '.');
+			(r.missing ? tr('. Pozor: časť dát sa nepodarilo načítať, výsledok môže byť nepresný', '. Note: some data could not be loaded, the result may be off') : '') + '.' +
+			(r.where === 'browser' ? tr(' Vypočítané v prehliadači.', ' Calculated in your browser.') : ''));
 	}
 
 	// Keep the result in step with the outline: dragging one of its points afterwards
@@ -758,8 +781,14 @@
 		});
 	}
 
+	// The calculation runs on the server (POST /opcviewer-api/volume, lib/volume.js), which
+	// reads the points from its own disk: a slow connection no longer matters. The result
+	// comes with a compact height grid, and the green/red highlight is drawn here as before.
+	// If the server can't do it (an install without that address, busy, too slow, offline),
+	// the same calculation runs in the browser. window.zmVolumeMode = 'browser' forces that.
+	var VOLUME_API = SCRIPT_BASE.replace(/potree_libs\/$/, '') + 'opcviewer-api/volume';
+
 	function computeVolume(viewer, measure) {
-		if (!window.zmVolumeGrid) { loadScript('opcviewer-grid.js', function () { computeVolume(viewer, measure); }); return; }
 		hideVolumeResult();
 		window.zmLastVolume = null;
 		watchOutline(viewer, measure);
@@ -769,25 +798,68 @@
 			resultEl.textContent = tr('Na výpočet objemu treba aspoň 3 body.', 'At least 3 points are needed for a volume.');
 			return;
 		}
+		if (window.zmVolumeMode === 'browser' || !window.XMLHttpRequest) { computeInBrowser(viewer, poly); return; }
+		var xhr = new XMLHttpRequest(), started = Date.now(), ticker = null;
+		var job = { cancel: function () { job.cancelled = true; clearInterval(ticker); try { xhr.abort(); } catch (e) { /* ignore */ } } };
+		volumeJob = job;
+		var waitText = function () {
+			var s = Math.round((Date.now() - started) / 1000);
+			resultEl.textContent = tr('Počítam objem na serveri…', 'Calculating volume on the server…') + (s >= 2 ? ' ' + s + ' s' : '');
+		};
+		waitText();
+		ticker = setInterval(waitText, 1000);
+		var finish = function () { clearInterval(ticker); if (volumeJob === job) volumeJob = null; };
+		var fallback = function () { finish(); computeInBrowser(viewer, poly); };
+		xhr.open('POST', VOLUME_API);
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.timeout = 130000;
+		xhr.onload = function () {
+			if (job.cancelled) return;
+			var r = null;
+			try { r = JSON.parse(xhr.responseText); } catch (e) { /* not JSON: the server path is missing */ }
+			if (xhr.status === 200 && r) { finish(); showVolume(viewer, r, 'server'); return; }
+			if ((xhr.status === 400 || xhr.status === 413) && r && r.error) {
+				finish();
+				resultEl.textContent = tr('Objem sa nedá vypočítať: ', 'The volume cannot be calculated: ') + r.error;
+				return;
+			}
+			fallback();
+		};
+		xhr.onerror = xhr.ontimeout = function () { if (!job.cancelled) fallback(); };
+		xhr.send(JSON.stringify({ project: projectFolder(location.pathname), outline: poly.map(function (p) { return [p.x, p.y, p.z]; }) }));
+	}
+
+	// Shows a result (from the server or the browser): result box and highlight.
+	function showVolume(viewer, r, where) {
+		if (!r.points) {
+			resultEl.textContent = tr('V označenej ploche nie sú žiadne body.', 'There are no points inside the outlined area.');
+			return;
+		}
+		r.where = where;
+		var overlay = r;
+		if (where === 'server') {
+			overlay = { cells: decodeHighlight(r.highlight, r.plane), cell: r.highlight.cell, maxHeight: r.maxHeight, maxDepth: r.maxDepth };
+		}
+		resultEl.__res = r;
+		window.zmLastVolume = r;
+		try { showOverlay(viewer, overlay); } catch (err) { if (window.console) console.warn('volume highlight failed', err); }
+		renderVolumeResult();
+	}
+
+	// The same calculation in the browser: loads the octree nodes over the outline itself.
+	function computeInBrowser(viewer, poly) {
+		if (!window.zmVolumeGrid) { loadScript('opcviewer-grid.js', function () { computeInBrowser(viewer, poly); }); return; }
 		var G = window.zmVolumeGrid;
 		var grid = G.makeVolumeGrid(poly, G.cellSize(poly));
 		resultEl.textContent = tr('Počítam objem…', 'Calculating volume…');
-		volumeJob = gatherPoints(viewer, grid, function (st, left) {
+		volumeJob = gatherPoints(viewer, grid, function (st) {
 			resultEl.textContent = tr('Počítam objem… načítaných ', 'Calculating volume… ') + fmtNum(st.points, 0) + tr(' bodov', ' points read');
 		}, function (st) {
 			volumeJob = null;
-			var refined = G.refine(grid), r = refined.result;
-			grid = refined.grid;
+			var r = G.refine(grid).result;
 			r.capped = st.capped;
 			r.missing = st.missing;
-			if (!r.points) {
-				resultEl.textContent = tr('V označenej ploche nie sú žiadne body.', 'There are no points inside the outlined area.');
-				return;
-			}
-			resultEl.__res = r;
-			window.zmLastVolume = r;
-			try { showOverlay(viewer, r); } catch (err) { if (window.console) console.warn('volume highlight failed', err); }
-			renderVolumeResult();
+			showVolume(viewer, r, 'browser');
 		});
 	}
 
@@ -819,7 +891,7 @@
 			if (sent) return;
 			sent = true;
 			if (hiddenSeen || tFirst === null) return; // background tab: timings are meaningless
-			var slug = decodeURIComponent(location.pathname.replace(/\/index\.html$/, '').replace(/^\/+|\/+$/g, '').split('/').pop() || '');
+			var slug = projectFolder(location.pathname);
 			if (!slug) return;
 			var dl = lastEnd > firstStart ? Math.round(lastEnd - firstStart) : 0;
 			var lan = /^(localhost|\d+\.\d+\.\d+\.\d+)$/.test(location.hostname);

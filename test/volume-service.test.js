@@ -69,3 +69,12 @@ test('a calculation over the time limit is stopped (504) and the next one still 
   await assert.rejects(svc.run('x', { delayMs: 5000 }), (e) => e.status === 504);
   assert.deepStrictEqual(await svc.run('x', { delayMs: 10 }), { slow: true });
 });
+
+test('an outline whose grid would be too large is refused before any memory is used', () => {
+  const sq = (w) => [[0, 0, 0], [w, 0, 0], [w, w, 0], [0, w, 0]];
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: sq(900) })), 200);
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: sq(3000) })), 400);
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: sq(1e7) })), 400);
+  // a long thin outline (a road or railway) is fine: only the bounding rectangle counts
+  assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: [[0, 0, 0], [5000, 0, 0], [5000, 60, 0], [0, 60, 0]] })), 200);
+});
