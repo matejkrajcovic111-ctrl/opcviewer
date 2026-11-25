@@ -59,7 +59,7 @@ Set them in front of the command, e.g. `curl … | sudo OPCV_HTTP_PORT=8080 bash
 | `/var/www/opcviewer` | project pages, `potree_libs/` (Potree with the opcviewer scripts), `.htaccess`, landing page | opcviewer |
 | `/etc/opcviewer/opcviewer.env` | settings | root |
 | `/etc/systemd/system/opcviewer.service` | the service (runs as user `opcviewer`) | root |
-| `/etc/apache2/sites-available/opcviewer.conf` | the Apache site (replaces Apache's default site on port 80) | root |
+| `/etc/apache2/sites-available/opcviewer.conf` | the Apache site (replaces Apache's default site on port 80); passes `POST /opcviewer-api/volume`, and nothing else, to the app (modules `proxy`, `proxy_http`) | root |
 
 Packages from apt: `apache2 git curl ca-certificates unzip xz-utils python3 libtbb12 acl`, plus the libraries headless Chrome needs. The `opcviewer` user gets read access to Apache's access logs (for view counts) through an ACL, nothing more.
 
@@ -77,6 +77,7 @@ Packages from apt: `apache2 git curl ca-certificates unzip xz-utils python3 libt
 | `OPCV_CONVERTER_DIR` | PotreeConverter folder |
 | `OPCV_ACCESS_LOG` | Apache access log read for statistics |
 | `OPCV_LOCAL_URL` | Where the server reaches its own project pages (thumbnails), `http://127.0.0.1:<http port>` |
+| `OPCV_SOURCE_URL` | Where the sidebar's version links to (default: the GitHub repository) |
 
 ## Going online
 

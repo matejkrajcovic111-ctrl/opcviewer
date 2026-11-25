@@ -2,6 +2,19 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.1.0 – 2026-11-25
+
+### Added
+- **Volume is calculated on the server.** The project page sends the outline to `POST /opcviewer-api/volume` (Apache passes exactly this one address to the app); the server reads the points from its own disk and returns the numbers and a compact height grid for the green/red highlight. Same maths as before (shared `viewer/opcviewer-grid.js`), so results are unchanged, but a slow connection no longer matters: on a real project 3.3 s instead of 8.8 s and 0.9 MB instead of 13 MB downloaded. Requests run one at a time in a worker thread (4 waiting, then "busy"), with a 120 s limit and a size limit on the outline. If the server can't answer, the page calculates in the browser as before.
+- **OSNAP bar** (right edge, middle): snaps measuring points to **End** points, **Mid**points, the **Perp**endicular foot from the previous point and **Int**ersections of measurements, AutoCAD-style, with a yellow marker. Each type on and off on its own; the OSNAP header or **F3** switches snapping as a whole. Remembered per visitor.
+- **English second line** for the badge (*Branding → Second line in English*), shown on English pages.
+- Sidebar header shows **opcviewer** and its version, linked to the release. `branding.json` now carries `version` and `sourceUrl` (`OPCV_SOURCE_URL`).
+
+### Changed
+- The navigation cube and the compass sit below the Bounding Box button (and its panel while it is open) instead of on top of it.
+- Removed from Potree's sidebar: the About section, the language list (the toolbar has SK/EN) and the *Box* and *Lock view* switches.
+- The installer enables Apache's `proxy` and `proxy_http` modules for the volume address.
+
 ## 2.0.1 – 2026-11-22
 
 ### Security

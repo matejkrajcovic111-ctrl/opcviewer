@@ -15,7 +15,9 @@ Never write passwords, tokens, keys, host names or personal paths into the repo.
 
 - **Project pages must stay byte-identical** to `test/fixtures/` unless a change to them is intended; existing installations have many pages generated from the template.
 - **Viewer scripts** (`viewer/`) run in visitors' browsers on top of stock Potree 1.8, with no build step: ES5-style code, no modules. They are copied into `potree_libs/` by `install.sh`; changing them needs no page regeneration.
-- Keep the `zm`-prefixed ids and globals (`#zm-branding`, `#zm-measure`, `#zm-bbox`, `#zm-volume`, `window.zmLang`, `window.zmVolumeGrid`, `window.zmMeasuring`): tests, the thumbnailer and the scripts depend on them.
+- Keep the `zm`-prefixed ids and globals (`#zm-branding`, `#zm-measure`, `#zm-bbox`, `#zm-volume`, `#zm-osnap`, `window.zmLang`, `window.zmVolumeGrid`, `window.zmMeasuring`, `window.zmOsnap`, `window.zmCleanSidebar`, `window.zmNavCubeViewport`, `window.zmTopRightBottom`, `window.zmDecodeHighlight`, `window.zmVolumeOf`): tests, the thumbnailer and the scripts depend on them.
+- **`viewer/opcviewer-grid.js` is shared** by the browser and the server (`lib/volume.js`): a change there changes both, and volume results clients already have must not move.
+- **`POST /opcviewer-api/volume` is public** (Apache proxies it). It must stay unauthenticated-safe: validated input, bounded memory and time. Never add another proxied path without a reason in docs/DECISIONS.md.
 - Potree 2's `boundingBox` is the cubic octree root. Use the `position` attribute range from `metadata.json` for the real extent.
 - Never call `load()` on an empty Potree 2 node (`numPoints` 0): its slot is never released and loading stops.
 - Rendering settings (point budget, EDL, high quality) are the owner's per-project choice; don't lower them to "fix" performance.

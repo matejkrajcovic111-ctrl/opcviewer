@@ -24,7 +24,8 @@ Point clouds from drones and laser scanners are big (gigabytes per project). Cli
 
 - **Upload and share.** Drop one or more LAS/LAZ files in the admin panel and watch the conversion live. When it's done, "Copy link" gives you the address to send. Projects can be renamed, re-titled and tuned (point budget, point size and shape, background, Eye-Dome-Lighting, which sidebar menus show). Deleted projects go to a trash first.
 - **Measuring toolbar for clients.** Point coordinates, distance, height, area, angle and **volume** sit in one bar at the bottom of every page. Potree 1.8's own measuring places every point on top of the first in current browsers; opcviewer fixes that.
-- **Stockpile and excavation volumes.** Click around the foot of a pile and the result shows volume above and below the base plane, net volume, area and tonnes for a given density. The measured cells are draped in green (fill) and red (cut) over the model.
+- **Stockpile and excavation volumes.** Click around the foot of a pile and the result shows volume above and below the base plane, net volume, area and tonnes for a given density. The calculation runs on the server, which reads the scan from its own disk, so it takes seconds even on a slow connection. The measured cells are draped in green (fill) and red (cut) over the model.
+- **Object snap (OSNAP).** Like in AutoCAD: measuring points snap to end points, midpoints, perpendiculars and intersections of what is already measured, each switchable in a bar at the right edge (F3 for all).
 - **Section box.** A Bounding Box tool, modelled on the one in 3Dsurvey, cuts the model to a box that you drag, rotate and step with the mouse and keyboard. Click again to hide the box and keep the cut, for looking inside a building.
 - **Your branding.** Company name, website, a link to your user guide, logo, browser-tab icon, accent colour and the default language (English or Slovak) are set in the admin panel and apply to every project page at once. With nothing set, pages stay plain.
 - **View counts and real load times.** Every project card shows how often it was opened and how long it took visitors to see the first points and the whole model, read from Apache's log and a tiny report each page sends after loading. Search engines, link previews and your own thumbnail renders are not counted.
@@ -55,7 +56,7 @@ flowchart LR
 ```
 
 1. **You upload a scan** in the admin panel. opcviewer runs PotreeConverter on it, writes the project folder into Apache's web root and generates the page from your settings.
-2. **Apache serves the pages and the point data** as plain files. The viewer downloads only the parts of the octree it needs, using HTTP range requests, so the admin app is not involved when a client looks at a model.
+2. **Apache serves the pages and the point data** as plain files. The viewer downloads only the parts of the octree it needs, using HTTP range requests, so the admin app is not involved when a client looks at a model. The one exception is the **volume calculation**: Apache passes exactly `POST /opcviewer-api/volume` to the app, which reads the points from disk and returns the result; nothing else of the app is reachable through Apache.
 3. **Viewer scripts** (`viewer/`) add the toolbar, the volume tool, the Bounding Box, branding and translations to Potree on every page. Branding is read from one small JSON file, so changing it updates all projects without regenerating any page.
 
 The details (page generation, the loader fix, how volume is computed, how statistics are collected) are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

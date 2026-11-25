@@ -90,6 +90,7 @@ Apache keeps its log for about two weeks; opcviewer stores the totals in `data/s
 |---|---|
 | Company name | Text in the bottom-right badge, linked to your website |
 | Second line | After the name, hidden on phones (e.g. your name and profession) |
+| Second line in English | Used instead on English pages (e.g. *surveyor* instead of *geodet*); empty = the line above everywhere |
 | Website | Link of the name and logo |
 | User guide link | A button in the badge (*User guide* / *Návod na použitie*) |
 | Viewer language for new visitors | English or Slovak; visitors can switch, and their choice is remembered |
@@ -112,17 +113,30 @@ Leave everything empty for plain opcviewer pages without a badge. The admin pane
 | Zoom | wheel | pinch |
 | Fly to a spot | double-click | |
 
-The ☰ button opens Potree's sidebar: appearance, clipping, navigation modes, scene and filters.
+The ☰ button opens Potree's sidebar: appearance, clipping, navigation modes, scene and filters. Its header shows the opcviewer version. The navigation cube and compass (sidebar → Navigation) appear below the Bounding Box button.
 
 ### Measuring
 
 The toolbar at the bottom: **Point** (coordinates of one point), **Distance**, **Height**, **Area**, **Angle**, **Volume** and **Clear**. Click points on the model; right-click finishes a distance, area or volume. **Esc** cancels the measurement being placed. Points of a finished measurement can be dragged. Coordinates and lengths are in the units of the scan, usually metres in the scan's coordinate system.
 
+### Object snap (OSNAP)
+
+The bar at the right edge makes measuring points snap, as in AutoCAD, to what is already measured (any measurement on the page, including the one being drawn):
+
+| | Snaps to |
+|---|---|
+| □ **Endpoint** (*Koncový bod*) | a point of a measurement, exactly |
+| △ **Midpoint** (*Stred*) | the middle of a segment |
+| ⊥ **Perpendicular** (*Kolmo*) | the foot of the perpendicular from the previous point onto a segment, in plan; height along that segment |
+| ✕ **Intersection** (*Priesečník*) | where two segments cross in plan; height from the scan's surface there (or the mean of the two segments) |
+
+When the cursor comes within 12 pixels of such a spot, a yellow marker and its name appear and the point jumps there; click to place it. Each type is switched on and off with its own button; **OSNAP** at the top (or **F3**) switches snapping off and on without forgetting which types were chosen. Default: Endpoint, Midpoint and Intersection. The choice is remembered in the visitor's browser. On narrow screens the bar shows icons only.
+
 ### Volume
 
 <img src="screenshots/04-volume.png" alt="Volume of a pit in a quarry" width="640">
 
-For stockpiles and excavations. Choose **Volume**, click around the foot of the pile (or the rim of the pit) on the ground and right-click to finish. After a moment the panel at the top left shows:
+For stockpiles and excavations. Choose **Volume**, click around the foot of the pile (or the rim of the pit) on the ground and right-click to finish. The calculation runs on the server (a few seconds, independent of the visitor's connection); if the server can't do it, the page calculates in the browser and says so. Then the panel at the top left shows:
 
 - the main result: **volume of the pile**, or **volume of the pit** when more is below the base than above it;
 - above the base (m³, highest point), below the base (m³, deepest point), net (above − below) and the outlined area;
@@ -153,4 +167,4 @@ Click the button a second time to **hide the box but keep the cut**, for looking
 
 ### Language
 
-**SK / EN** at the right end of the toolbar (or the language row in the sidebar). The choice is remembered in the visitor's browser; the default comes from [Branding](#branding).
+**SK / EN** at the right end of the toolbar. The choice is remembered in the visitor's browser; the default comes from [Branding](#branding).
