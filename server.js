@@ -17,6 +17,7 @@ const thumbnails = require('./lib/thumbnails');
 const stats = require('./lib/stats');
 const branding = require('./lib/branding');
 const setupCode = require('./lib/setupCode');
+const volumeService = require('./lib/volumeService');
 
 fs.mkdirSync(config.DATA_DIR, { recursive: true });
 fs.mkdirSync(config.UPLOADS_DIR, { recursive: true });
@@ -25,6 +26,29 @@ fs.mkdirSync(config.SESSIONS_DIR, { recursive: true });
 
 const app = express();
 app.disable('x-powered-by');
+
+// ---- public: the Volume tool on project pages ----
+// The only address Apache passes through from the internet (web/apache-site.conf). It is
+// registered before sessions and the login check, needs no session and touches nothing
+// else of the admin app.
+const volumeJobs = volumeService.createVolumeService();
+app.post('/opcviewer-api/volume', express.json({ limit: '64kb' }), async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const { project, outline } = volumeService.validateVolumeRequest(req.body);
+    const metadataPath = await volumeService.resolveVolumeProject(project);
+    res.json(await volumeJobs.run(metadataPath, outline));
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500 && status !== 504) console.error('volume:', err.message);
+    res.status(status).json({ error: status >= 500 && status !== 504 ? 'The volume could not be calculated' : err.message });
+  }
+});
+app.use('/opcviewer-api', (err, req, res, next) => { // body too large or not JSON
+  if (!err) return next();
+  res.status(err.status === 413 ? 413 : 400).json({ error: err.status === 413 ? 'The outline is too large' : 'Bad request' });
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use(
   session({
