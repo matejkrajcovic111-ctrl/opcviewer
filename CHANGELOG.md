@@ -2,6 +2,16 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.2.1 – 2026-11-25
+
+### Changed
+- **Right-drag pans while measuring.** With a point not yet placed (distance, area, height, angle, volume…), dragging with the right mouse button moves the view and you keep measuring. A right-click without moving still finishes the measurement, as before.
+### Fixed
+- **Height and Angle:** the last point was treated as placed as soon as it appeared under the cursor, so the toolbar button went dark and OSNAP didn't snap that point. Both now stay on until the point is clicked.
+
+### Changed (bar)
+- **OSNAP bar smaller and quieter:** about a third smaller, more transparent, and the snaps that are on get a soft highlight with a light-blue icon instead of a solid blue block.
+
 ## 2.2.0 – 2026-11-25
 
 ### Added

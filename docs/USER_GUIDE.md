@@ -117,7 +117,7 @@ The ☰ button opens Potree's sidebar: appearance, navigation modes, scene and f
 
 ### Measuring
 
-The toolbar at the bottom: **Point** (coordinates of one point), **Distance**, **Height**, **Area**, **Angle**, **Volume** and **Clear**. Click points on the model; right-click finishes a distance, area or volume. **Esc** cancels the measurement being placed. Points of a finished measurement can be dragged. Coordinates and lengths are in the units of the scan, usually metres in the scan's coordinate system.
+The toolbar at the bottom: **Point** (coordinates of one point), **Distance**, **Height**, **Area**, **Angle**, **Volume** and **Clear**. Click points on the model; right-click finishes a distance, area or volume. Dragging with the right mouse button moves the view at any time, also between two points of a measurement. **Esc** cancels the measurement being placed. Points of a finished measurement can be dragged. Coordinates and lengths are in the units of the scan, usually metres in the scan's coordinate system.
 
 ### Object snap (OSNAP)
 
