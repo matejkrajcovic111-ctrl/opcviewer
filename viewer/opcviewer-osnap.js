@@ -2,19 +2,21 @@
 // While a point is being placed with any measuring tool, the cursor snaps to corners (End),
 // segment middles (Mid), the foot of the perpendicular from the previous point (Perp, in
 // plan) and crossings of two segments in plan (Int) of all measurements in the scene.
-// A vertical bar on the right edge switches each type on and off; its header (or F3)
+// A vertical bar on the right edge switches each type on and off; its header (or F4)
 // switches snapping as a whole. Loaded by opcviewer-ui.js, which calls zmOsnap.attach().
 // ES5, no build step (runs on stock Potree 1.8 pages).
 (function () {
 	'use strict';
 
 	var RADIUS = 12; // px on screen
-	var RANK = { end: 0, 'int': 1, mid: 2, perp: 3 };
+	var RANK = { end: 0, 'int': 1, mid: 2, perp: 3, near: 4 };
+	// AutoCAD's marker shapes, drawn in a 26 x 26 box: [element, attributes].
 	var TYPES = [
-		{ id: 'end', glyph: '□', sk: 'Koncový bod', en: 'Endpoint' },
-		{ id: 'mid', glyph: '△', sk: 'Stred', en: 'Midpoint' },
-		{ id: 'perp', glyph: '⊥', sk: 'Kolmo', en: 'Perpendicular' },
-		{ id: 'int', glyph: '✕', sk: 'Priesečník', en: 'Intersection' }
+		{ id: 'end', sk: 'Koncový bod', en: 'Endpoint', shape: [['rect', { x: 6, y: 6, width: 14, height: 14 }]] },
+		{ id: 'mid', sk: 'Stred', en: 'Midpoint', shape: [['path', { d: 'M13 5 L21.5 20 L4.5 20 Z' }]] },
+		{ id: 'perp', sk: 'Kolmo', en: 'Perpendicular', shape: [['path', { d: 'M5 21 H21 M9 21 V5 M9 15 H15 V21' }]] },
+		{ id: 'int', sk: 'Priesečník', en: 'Intersection', shape: [['path', { d: 'M6 6 L20 20 M20 6 L6 20' }]] },
+		{ id: 'near', sk: 'Najbližší', en: 'Nearest', shape: [['path', { d: 'M6 6 H20 L6 20 H20 Z' }]] }
 	];
 	var STORE_KEY = 'zm-osnap';
 	var MAX_INT_SEGMENTS = 400; // crossings are checked pairwise
@@ -81,12 +83,39 @@
 				}
 			}
 		}
+		// Nearest: any point along a line, only when no specific target is in reach (as in
+		// AutoCAD, otherwise the cursor would always land on the line and never on its corners).
+		if (!best && enabled.near) {
+			for (i = 0; i < segments.length; i++) nearest(segments[i][0], segments[i][1]);
+		}
 		return best && { type: best.type, pos: best.pos };
+
+		function nearest(a, b) {
+			var pa = project(a), pb = project(b);
+			if (!pa || !pb) return;
+			// cheap check on the projected segment first
+			var dx = pb.x - pa.x, dy = pb.y - pa.y, l2 = dx * dx + dy * dy;
+			var u = l2 > 0 ? Math.max(0, Math.min(1, ((cursor.x - pa.x) * dx + (cursor.y - pa.y) * dy) / l2)) : 0;
+			var ex = pa.x + u * dx - cursor.x, ey = pa.y + u * dy - cursor.y;
+			if (ex * ex + ey * ey > RADIUS * RADIUS) return;
+			// Then along the segment in 3D: perspective bends the screen spacing, so search for
+			// the spot whose projection is closest to the cursor (one minimum on a line).
+			var lo = 0, hi = 1;
+			var dist = function (t) {
+				var q = project(lerp(a, b, t));
+				return q ? (q.x - cursor.x) * (q.x - cursor.x) + (q.y - cursor.y) * (q.y - cursor.y) : Infinity;
+			};
+			for (var it = 0; it < 40; it++) {
+				var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+				if (dist(m1) <= dist(m2)) hi = m2; else lo = m1;
+			}
+			consider('near', lerp(a, b, (lo + hi) / 2));
+		}
 	}
 
 	// ------------------------------------------------------------------ settings
 
-	var state = { on: true, end: true, mid: true, perp: false, 'int': true };
+	var state = { on: true, end: true, mid: true, perp: false, 'int': true, near: false };
 	try {
 		var saved = JSON.parse(window.localStorage.getItem(STORE_KEY) || 'null');
 		if (saved && typeof saved === 'object') {
@@ -103,32 +132,52 @@
 	function tr(sk, en) { return lang() === 'sk' ? sk : en; }
 
 	var bar = null, mark = null;
+	var SVG_NS = 'http://www.w3.org/2000/svg';
+
+	function drawShape(type, cls) {
+		var svg = document.createElementNS(SVG_NS, 'svg');
+		svg.setAttribute('viewBox', '0 0 26 26');
+		svg.setAttribute('class', cls);
+		svg.setAttribute('aria-hidden', 'true');
+		TYPES.filter(function (t) { return t.id === type; })[0].shape.forEach(function (d) {
+			var el = document.createElementNS(SVG_NS, d[0]);
+			for (var k in d[1]) el.setAttribute(k, d[1][k]);
+			svg.appendChild(el);
+		});
+		return svg;
+	}
 
 	function buildBar() {
 		var style = document.createElement('style');
+		// Same look as the measuring toolbar (#zm-measure): dark rounded bar, icon over label,
+		// the active ones filled with the accent colour.
 		style.textContent = [
-			'#zm-osnap{position:fixed;right:12px;top:50%;z-index:10000;display:flex;flex-direction:column;gap:3px;padding:5px;',
-			'border-radius:8px;background:rgba(16,20,26,.78);box-shadow:0 1px 4px rgba(0,0,0,.4);',
-			'font:12px/1.2 Arial,Helvetica,sans-serif;color:#e6e9ee;user-select:none}',
-			'#zm-osnap button{display:flex;align-items:center;gap:7px;padding:5px 9px 5px 7px;border:0;border-radius:5px;',
-			'background:transparent;color:#e6e9ee;font:inherit;cursor:pointer;text-align:left;white-space:nowrap}',
-			'#zm-osnap button:hover{background:rgba(255,255,255,.08)}',
-			'#zm-osnap .zm-os-head{justify-content:center;font-weight:bold;letter-spacing:.5px;background:#3b4452}',
-			'#zm-osnap .zm-os-head.zm-on{background:var(--opcv-accent,#4c8dff);color:#fff}',
-			'#zm-osnap .zm-os-head.zm-on:hover{background:var(--opcv-accent-hover,#3a78e6)}',
-			'#zm-osnap .zm-os-g{display:inline-block;width:16px;text-align:center;font-size:14px;color:#ffd400}',
-			'#zm-osnap .zm-os-t{opacity:.45}',
-			'#zm-osnap .zm-os-t .zm-os-g{color:#8a8f98}',
-			'#zm-osnap .zm-os-t.zm-on{opacity:1;box-shadow:inset 3px 0 0 var(--opcv-accent,#4c8dff)}',
-			'#zm-osnap .zm-os-t.zm-on .zm-os-g{color:#ffd400}',
-			'#zm-osnap.zm-off .zm-os-t.zm-on{opacity:.6}',
-			'@media (max-width:620px){#zm-osnap .zm-os-l{display:none}#zm-osnap button{padding:5px 6px}',
-			'#zm-osnap .zm-os-head{font-size:10px;padding:4px 3px}}',
+			'#zm-osnap{position:fixed;right:12px;top:50%;z-index:10000;display:flex;flex-direction:column;align-items:stretch;gap:4px;',
+			'padding:5px;border-radius:8px;background:rgba(16,20,26,.78);box-shadow:0 1px 4px rgba(0,0,0,.4);',
+			'font:13px/1.3 Arial,Helvetica,sans-serif;color:#e6e9ee;user-select:none}',
+			'#zm-osnap button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;',
+			'min-width:78px;padding:6px 6px;border:0;border-radius:6px;background:transparent;color:#9aa3af;',
+			'font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}',
+			'#zm-osnap button:hover{background:rgba(255,255,255,.12);color:#e6e9ee}',
+			'#zm-osnap .zm-os-t.zm-on{background:var(--opcv-accent,#4c8dff);color:#fff}',
+			'#zm-osnap .zm-os-t.zm-on:hover{background:var(--opcv-accent-hover,#3a78e6)}',
+			'#zm-osnap .zm-os-i{width:24px;height:24px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}',
+			'#zm-osnap .zm-os-head{flex-direction:row;gap:7px;padding:6px 7px;color:#e6e9ee;font-weight:bold;font-size:12px;letter-spacing:.4px}',
+			'#zm-osnap .zm-os-sw{position:relative;flex:none;width:28px;height:16px;border-radius:8px;background:#4a5260;transition:background .15s}',
+			'#zm-osnap .zm-os-sw:after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .15s}',
+			'#zm-osnap.zm-is-on .zm-os-sw{background:var(--opcv-accent,#4c8dff)}',
+			'#zm-osnap.zm-is-on .zm-os-sw:after{left:14px}',
+			'#zm-osnap .zm-os-key{margin-top:-3px;text-align:center;font-size:10px;color:#7d8592}',
+			'#zm-osnap .zm-os-sep{height:1px;margin:1px 3px;background:rgba(255,255,255,.18)}',
+			'#zm-osnap:not(.zm-is-on) .zm-os-t{opacity:.4}',
+			'@media (max-width:620px){#zm-osnap .zm-os-l,#zm-osnap .zm-os-key{display:none}#zm-osnap button{min-width:0;padding:6px}',
+			'#zm-osnap .zm-os-head .zm-os-name{display:none}}',
 			'#zm-osnap-mark{position:fixed;z-index:10001;pointer-events:none;display:none;color:#ffd400;',
-			'font:bold 12px/1 Arial,Helvetica,sans-serif;text-shadow:0 0 2px #000,0 0 2px #000}',
-			'#zm-osnap-mark .zm-os-mg{position:absolute;left:-9px;top:-10px;width:18px;text-align:center;font-size:20px;line-height:20px}',
-			'#zm-osnap-mark .zm-os-ml{position:absolute;left:14px;top:10px;white-space:nowrap;padding:1px 4px;border-radius:3px;',
-			'background:rgba(16,20,26,.8)}'
+			'font:bold 12px/1 Arial,Helvetica,sans-serif}',
+			'#zm-osnap-mark svg{position:absolute;left:-11px;top:-11px;width:22px;height:22px;fill:none;stroke:#ffd400;stroke-width:2.5;',
+			'stroke-linejoin:round;filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)}',
+			'#zm-osnap-mark .zm-os-ml{position:absolute;left:15px;top:11px;white-space:nowrap;padding:2px 5px;border-radius:3px;',
+			'background:rgba(16,20,26,.85)}'
 		].join('');
 		document.head.appendChild(style);
 
@@ -138,20 +187,30 @@
 		head.type = 'button';
 		head.className = 'zm-os-head';
 		head.setAttribute('data-osnap', 'on');
-		head.textContent = 'OSNAP';
+		var name = document.createElement('span');
+		name.className = 'zm-os-name';
+		name.textContent = 'OSNAP';
+		var sw = document.createElement('span');
+		sw.className = 'zm-os-sw';
+		head.appendChild(name);
+		head.appendChild(sw);
 		head.addEventListener('click', function () { toggle('on'); });
 		bar.appendChild(head);
+		var key = document.createElement('div');
+		key.className = 'zm-os-key';
+		key.textContent = 'F4';
+		bar.appendChild(key);
+		var sep = document.createElement('div');
+		sep.className = 'zm-os-sep';
+		bar.appendChild(sep);
 		TYPES.forEach(function (t) {
 			var b = document.createElement('button');
 			b.type = 'button';
 			b.className = 'zm-os-t';
 			b.setAttribute('data-osnap', t.id);
-			var g = document.createElement('span');
-			g.className = 'zm-os-g';
-			g.textContent = t.glyph;
+			b.appendChild(drawShape(t.id, 'zm-os-i'));
 			var l = document.createElement('span');
 			l.className = 'zm-os-l';
-			b.appendChild(g);
 			b.appendChild(l);
 			b.addEventListener('click', function () { toggle(t.id); });
 			bar.appendChild(b);
@@ -164,16 +223,11 @@
 
 		mark = document.createElement('div');
 		mark.id = 'zm-osnap-mark';
-		['zm-os-mg', 'zm-os-ml'].forEach(function (c) { var sp = document.createElement('span'); sp.className = c; mark.appendChild(sp); });
+		var ml = document.createElement('span');
+		ml.className = 'zm-os-ml';
+		mark.appendChild(ml);
 		document.body.appendChild(mark);
 
-		document.addEventListener('keydown', function (e) {
-			if (e.key !== 'F3' && e.keyCode !== 114) return;
-			var t = e.target && e.target.tagName;
-			if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-			e.preventDefault();
-			toggle('on');
-		});
 		label();
 		if (window.zmLang && window.zmLang.onChange) window.zmLang.onChange(label);
 	}
@@ -187,11 +241,10 @@
 
 	function label() {
 		if (!bar) return;
-		bar.classList.toggle('zm-off', !state.on);
+		bar.classList.toggle('zm-is-on', state.on);
 		var head = bar.querySelector('.zm-os-head');
-		head.classList.toggle('zm-on', state.on);
 		head.setAttribute('aria-pressed', String(state.on));
-		head.title = tr('Prichytávanie k objektom zap./vyp. (F3)', 'Object snap on/off (F3)');
+		head.title = tr('Prichytávanie k objektom zap./vyp. (F4)', 'Object snap on/off (F4)');
 		TYPES.forEach(function (t) {
 			var b = bar.querySelector('[data-osnap="' + t.id + '"]');
 			b.classList.toggle('zm-on', state[t.id]);
@@ -201,9 +254,15 @@
 		});
 	}
 
+	var markType = null;
 	function showMark(type, x, y) {
 		var t = TYPES.filter(function (d) { return d.id === type; })[0];
-		mark.querySelector('.zm-os-mg').textContent = t.glyph;
+		if (markType !== type) {
+			var old = mark.querySelector('svg');
+			if (old) mark.removeChild(old);
+			mark.insertBefore(drawShape(type, 'zm-os-mg'), mark.firstChild);
+			markType = type;
+		}
 		mark.querySelector('.zm-os-ml').textContent = tr(t.sk, t.en);
 		mark.style.left = Math.round(x) + 'px';
 		mark.style.top = Math.round(y) + 'px';
@@ -224,6 +283,15 @@
 		bar.style.top = top + 'px';
 		bar.style.right = right + 'px';
 	}
+
+	// F4 switches snapping off and on (the owner's choice; AutoCAD uses F3).
+	document.addEventListener('keydown', function (e) {
+		if (e.key !== 'F4' && e.keyCode !== 115) return;
+		var t = e.target && e.target.tagName;
+		if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+		e.preventDefault();
+		toggle('on');
+	});
 
 	// getPlacing() -> the measurement whose last point is being placed, or null.
 	function attach(viewer, getPlacing) {

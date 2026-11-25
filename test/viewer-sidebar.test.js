@@ -28,6 +28,17 @@ function potreeSidebar() {
     const input = el(el(el(list, 'li'), 'label'), 'input', id);
     input.checked = true;
   }
+  el(menu, 'h3', 'menu_tools');
+  const tools = el(menu, 'div');
+  const div = (text) => { const d = el(tools, 'div'); d.className = 'divider'; el(d, 'span').textContent = text; return d; };
+  div('Measurement');
+  el(tools, 'li', 'tools');
+  div('Clipping').id = 'clip_divider_for_test';
+  el(tools, 'li', 'clipping_tools');
+  el(el(tools, 'li', 'clip_task_li'), 'selectgroup', 'cliptask_options');
+  el(el(tools, 'li', 'clip_method_li'), 'selectgroup', 'clipmethod_options');
+  div('Navigation').id = 'nav_divider';
+  el(tools, 'li', 'navigation');
   el(menu, 'h3', 'menu_about');
   el(menu, 'div', 'about_body').textContent = 'Potree is a viewer…';
   return doc;
@@ -77,4 +88,13 @@ test('the navigation cube viewport moves down by the offset, everything else is 
   assert.deepStrictEqual(f(0, 0, 1600, 1000, 1600, 1000, 60), [0, 0, 1600, 1000]);
   assert.deepStrictEqual(f(10, 20, 150, 150, 1600, 1000, 60), [10, 20, 150, 150]);
   assert.deepStrictEqual(f(1450, 850, 150, 150, 1600, 1000, 0), [1450, 850, 150, 150]);
+});
+
+test('the Clipping part of Tools is taken out, Navigation stays', () => {
+  const doc = potreeSidebar();
+  ui().zmCleanSidebar(doc, {});
+  for (const id of ['clip_divider_for_test', 'clipping_tools', 'clip_task_li', 'cliptask_options', 'clip_method_li', 'clipmethod_options']) {
+    assert.strictEqual(doc.getElementById(id), null, id);
+  }
+  for (const id of ['tools', 'nav_divider', 'navigation']) assert.ok(doc.getElementById(id), id);
 });

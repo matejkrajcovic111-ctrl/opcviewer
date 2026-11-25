@@ -2,6 +2,16 @@
 
 Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlier versions were the author's private "Point Cloud Viewer"; their numbers were counted by hand and only 1.5 was tagged.
 
+## 2.2.0 – 2026-11-25
+
+### Added
+- **Nearest** snap (*Najbližší*): any point along a measured line, closest to the cursor. It gives way to Endpoint, Midpoint, Intersection and Perpendicular when one of those is in reach, as in AutoCAD. Off by default.
+
+### Changed
+- **OSNAP bar redesigned** to match the measuring toolbar: drawn AutoCAD-style icons over labels, active snaps filled with the accent colour, an on/off switch at the top. The yellow marker on the model uses the same drawn shapes.
+- OSNAP is switched on and off with **F4** (was F3).
+- Removed the **Clipping** part of the sidebar's Tools menu (the Bounding Box button does the cutting).
+
 ## 2.1.1 – 2026-11-25
 
 ### Security
@@ -11,7 +21,7 @@ Versions follow [semantic versioning](https://semver.org/) from 2.0.0 on. Earlie
 
 ### Added
 - **Volume is calculated on the server.** The project page sends the outline to `POST /opcviewer-api/volume` (Apache passes exactly this one address to the app); the server reads the points from its own disk and returns the numbers and a compact height grid for the green/red highlight. Same maths as before (shared `viewer/opcviewer-grid.js`), so results are unchanged, but a slow connection no longer matters: on a real project 3.3 s instead of 8.8 s and 0.9 MB instead of 13 MB downloaded. Requests run one at a time in a worker thread (4 waiting, then "busy"), at most 90 s from arrival, and stop when the visitor leaves; the outline is size-limited. If the server can't answer, the page calculates in the browser as before.
-- **OSNAP bar** (right edge, middle): snaps measuring points to **End** points, **Mid**points, the **Perp**endicular foot from the previous point and **Int**ersections of measurements, AutoCAD-style, with a yellow marker. Each type on and off on its own; the OSNAP header or **F3** switches snapping as a whole. Remembered per visitor.
+- **OSNAP bar** (right edge, middle): snaps measuring points to **End** points, **Mid**points, the **Perp**endicular foot from the previous point and **Int**ersections of measurements, AutoCAD-style, with a yellow marker. Each type on and off on its own; the OSNAP header or **F3** snapping as a whole (F4 since 2.2.0). Remembered per visitor.
 - **English second line** for the badge (*Branding → Second line in English*), shown on English pages.
 - Sidebar header shows **opcviewer** and its version, linked to the release. `branding.json` now carries `version` and `sourceUrl` (`OPCV_SOURCE_URL`).
 

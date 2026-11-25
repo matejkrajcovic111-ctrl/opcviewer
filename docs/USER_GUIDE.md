@@ -113,7 +113,7 @@ Leave everything empty for plain opcviewer pages without a badge. The admin pane
 | Zoom | wheel | pinch |
 | Fly to a spot | double-click | |
 
-The ☰ button opens Potree's sidebar: appearance, clipping, navigation modes, scene and filters. Its header shows the opcviewer version. The navigation cube and compass (sidebar → Navigation) appear below the Bounding Box button.
+The ☰ button opens Potree's sidebar: appearance, navigation modes, scene and filters. Its header shows the opcviewer version. The navigation cube and compass (sidebar → Navigation) appear below the Bounding Box button.
 
 ### Measuring
 
@@ -129,8 +129,9 @@ The bar at the right edge makes measuring points snap, as in AutoCAD, to what is
 | △ **Midpoint** (*Stred*) | the middle of a segment |
 | ⊥ **Perpendicular** (*Kolmo*) | the foot of the perpendicular from the previous point onto a segment, in plan; height along that segment |
 | ✕ **Intersection** (*Priesečník*) | where two segments cross in plan; height from the scan's surface there (or the mean of the two segments) |
+| ⧗ **Nearest** (*Najbližší*) | any point along a segment, the one closest to the cursor; only when none of the above is in reach |
 
-When the cursor comes within 12 pixels of such a spot, a yellow marker and its name appear and the point jumps there; click to place it. Each type is switched on and off with its own button; **OSNAP** at the top (or **F3**) switches snapping off and on without forgetting which types were chosen. Default: Endpoint, Midpoint and Intersection. The choice is remembered in the visitor's browser. On narrow screens the bar shows icons only.
+When the cursor comes within 12 pixels of such a spot, a yellow marker and its name appear and the point jumps there; click to place it. Each type is switched on and off with its own button; the switch at the top (or **F4**) turns snapping off and on without forgetting which types were chosen. Default: Endpoint, Midpoint and Intersection. The choice is remembered in the visitor's browser. On narrow screens the bar shows icons only.
 
 ### Volume
 

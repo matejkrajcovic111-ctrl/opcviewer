@@ -234,6 +234,20 @@
 		drop(langs);
 		var about = doc.getElementById('menu_about');
 		if (about) { drop(about.nextElementSibling); drop(about); }
+		// Tools → Clipping (the Bounding Box button does the cutting): its divider, the clip
+		// icons and the clip task / method rows. Navigation stays.
+		var clip = doc.getElementById('clipping_tools');
+		if (clip && clip.parentNode) {
+			var row = Array.prototype.filter.call(clip.parentNode.children, function (e) { return e.tagName; });
+			var before = row[row.indexOf(clip) - 1];
+			if (before && /(^|\s)divider(\s|$)/.test(before.className || '')) drop(before);
+			drop(clip);
+		}
+		['cliptask_options', 'clipmethod_options'].forEach(function (id) {
+			var el = doc.getElementById(id), li = el;
+			while (li && li.tagName !== 'LI') li = li.parentNode;
+			drop(li || el);
+		});
 		['show_bounding_box', 'set_freeze'].forEach(function (id) {
 			var input = doc.getElementById(id);
 			if (!input) return;

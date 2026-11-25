@@ -69,8 +69,8 @@ test('targets behind the camera (no screen position) are skipped', () => {
   assert.strictEqual(O.pick({ x: 0, y: 0 }, [], [P(0, 0, 0)], null, ALL, () => null), null);
 });
 
-test('defaults: on, with End, Mid and Int, Perp off', () => {
-  assert.deepStrictEqual({ ...O.state }, { on: true, end: true, mid: true, perp: false, int: true });
+test('defaults: on, with End, Mid and Int; Perp and Nearest off', () => {
+  assert.deepStrictEqual({ ...O.state }, { on: true, end: true, mid: true, perp: false, int: true, near: false });
 });
 
 test('the cloud is only asked for a height at crossings near the cursor', () => {
@@ -81,4 +81,51 @@ test('the cloud is only asked for a height at crossings near the cursor', () => 
   assert.strictEqual(calls, 0);
   assert.strictEqual(O.pick({ x: 50, y: 48 }, [A, B], [], null, ALL, project, surfaceZ).pos.z, 12.5);
   assert.strictEqual(calls, 1);
+});
+
+test('F4 switches snapping off and on (F3 does nothing)', () => {
+  const listeners = {};
+  const doc = { addEventListener: (t, fn) => { (listeners[t] = listeners[t] || []).push(fn); } };
+  const O2 = loadViewerScript(path.join(__dirname, '..', 'viewer', 'opcviewer-osnap.js'), { document: doc }).window.zmOsnap;
+  const press = (key) => { let prevented = false; listeners.keydown.forEach((fn) => fn({ key, target: {}, preventDefault: () => { prevented = true; } })); return prevented; };
+  assert.strictEqual(O2.state.on, true);
+  assert.strictEqual(press('F3'), false);
+  assert.strictEqual(O2.state.on, true);
+  assert.strictEqual(press('F4'), true);
+  assert.strictEqual(O2.state.on, false);
+  press('F4');
+  assert.strictEqual(O2.state.on, true);
+});
+
+const WITH_NEAR = { ...ALL, near: true };
+
+test('Nearest: the point on a line closest to the cursor, height along the line', () => {
+  const r = O.pick({ x: 63, y: 5 }, [SEG], [], null, WITH_NEAR, project); // 6.3 m along, 0.5 m off the line
+  assert.strictEqual(r.type, 'near');
+  assert.ok(Math.abs(r.pos.x - 6.3) < 1e-3 && Math.abs(r.pos.y) < 1e-9 && Math.abs(r.pos.z - 101.26) < 1e-3, JSON.stringify(r.pos));
+  assert.strictEqual(O.pick({ x: 63, y: 13 }, [SEG], [], null, WITH_NEAR, project), null); // 13 px away
+  assert.strictEqual(O.pick({ x: 63, y: 5 }, [SEG], [], null, ALL, project), null); // switched off
+});
+
+test('Nearest gives way to end, middle and the others when they are in reach', () => {
+  // cursor 3 px from the line but 9 px from the middle: the middle wins
+  assert.strictEqual(O.pick({ x: 108, y: 3 }, [SEG], [], null, WITH_NEAR, project).type, 'mid');
+  assert.strictEqual(O.pick({ x: 192, y: 2 }, [SEG], [SEG[1]], null, WITH_NEAR, project).type, 'end');
+});
+
+test('Nearest is exact on screen under a perspective-like projection', () => {
+  // depth along y: things further away shrink towards the centre
+  const persp = (v) => ({ x: 400 + 300 * v.x / (v.y + 5), y: 300 - 300 * v.z / (v.y + 5) });
+  const seg = [P(-4, 0, 0), P(4, 30, 0)];
+  const cursor = { x: 420, y: 303 };
+  const r = O.pick(cursor, [seg], [], null, { on: true, near: true }, persp);
+  assert.strictEqual(r.type, 'near');
+  // brute force over the segment for the closest projected point
+  let best = Infinity;
+  for (let i = 0; i <= 20000; i++) {
+    const t = i / 20000, q = persp({ x: -4 + 8 * t, y: 30 * t, z: 0 });
+    best = Math.min(best, Math.hypot(q.x - cursor.x, q.y - cursor.y));
+  }
+  const got = persp(r.pos);
+  assert.ok(Math.hypot(got.x - cursor.x, got.y - cursor.y) - best < 0.01, `${Math.hypot(got.x - cursor.x, got.y - cursor.y)} vs ${best}`);
 });
