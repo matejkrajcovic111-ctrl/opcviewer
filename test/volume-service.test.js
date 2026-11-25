@@ -43,9 +43,10 @@ test('a project resolves to its metadata.json inside the web folder', async () =
   assert.strictEqual(await resolveVolumeProject('Cone', www), path.join(www, 'Cone', 'pointclouds', 'index', 'metadata.json'));
 });
 
-test('unknown folders, files and folders without point data are refused with 400', async () => {
+// 404, not 400: the page then calculates in the browser, as 2.0 did for any project.
+test('unknown folders, files and folders without point data are answered with 404', async () => {
   for (const name of ['Nope', 'Empty', 'file.txt', 'potree_libs']) {
-    await assert.rejects(resolveVolumeProject(name, www), (e) => e.status === 400, name);
+    await assert.rejects(resolveVolumeProject(name, www), (e) => e.status === 404, name);
   }
 });
 
@@ -84,4 +85,39 @@ test('a flat line-shaped outline cannot slip past the grid limit', () => {
   assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: line })), 400);
   const thin = [[0, 0, 0], [3e6, 0, 0], [3e6, 1e-9, 0]];
   assert.strictEqual(status(() => validateVolumeRequest({ project: 'Cone', outline: thin })), 400);
+});
+
+const SLOW = path.join(__dirname, 'helpers', 'slow-volume-worker.js');
+
+test('a visitor who gives up frees their place: a waiting job is dropped, a running one stopped', async () => {
+  const svc = createVolumeService({ workerFile: SLOW });
+  const running = new AbortController(), queued = new AbortController();
+  const t0 = Date.now();
+  const a = svc.run('x', { delayMs: 5000 }, running.signal).then(() => 200, (e) => e.status);
+  const b = svc.run('x', { delayMs: 5000 }, queued.signal).then(() => 200, (e) => e.status);
+  const c = svc.run('x', { delayMs: 10 }).then(() => 200, (e) => e.status);
+  queued.abort();
+  setTimeout(() => running.abort(), 200);
+  assert.deepStrictEqual(await Promise.all([a, b, c]), [499, 499, 200]);
+  assert.ok(Date.now() - t0 < 2500, `took ${Date.now() - t0} ms`);
+});
+
+test('the time limit counts from the request, so a job does not wait past it in the queue', async () => {
+  const svc = createVolumeService({ workerFile: SLOW, timeoutMs: 1000 });
+  const t0 = Date.now();
+  const first = svc.run('x', { delayMs: 5000 }).then(() => 200, (e) => e.status);
+  const second = svc.run('x', { delayMs: 10 }).then(() => 200, (e) => e.status);
+  assert.strictEqual(await second, 504);
+  assert.ok(Date.now() - t0 < 2000, `second answered after ${Date.now() - t0} ms`);
+  assert.strictEqual(await first, 504);
+});
+
+test('the default time limit ends before Cloudflare gives up (100 s)', () => {
+  assert.ok(require('../lib/volumeService').TIMEOUT_MS <= 90000);
+});
+
+test('a worker that cannot start fails that request and the service keeps answering', async () => {
+  const svc = createVolumeService({ workerFile: 'not-a-valid-worker-path.js' });
+  await assert.rejects(svc.run('x', {}), (e) => e.status === 500);
+  await assert.rejects(svc.run('x', {}), (e) => e.status === 500); // not stuck as "running"
 });

@@ -894,7 +894,7 @@
 		var fallback = function () { finish(); computeInBrowser(viewer, poly); };
 		xhr.open('POST', VOLUME_API);
 		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.timeout = 130000;
+		xhr.timeout = 95000; // the server gives up at 90 s, Cloudflare at 100 s
 		xhr.onload = function () {
 			if (job.cancelled) return;
 			var r = null;

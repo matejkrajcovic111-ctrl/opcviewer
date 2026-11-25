@@ -44,21 +44,32 @@
 		var nx = Math.max(1, Math.ceil((maxX - minX) / cell)), ny = Math.max(1, Math.ceil((maxY - minY) / cell));
 		if (!(nx * ny <= MAX_CELLS)) throw new Error('The outline is too large for a volume (grid of ' + Math.round(nx * ny) + ' cells)');
 		var sum = new Float64Array(nx * ny), cnt = new Uint32Array(nx * ny), inside = new Uint8Array(nx * ny);
-		var insideCount = 0;
+		// Which cell centres are inside the outline (even-odd rule). Row by row: the edges'
+		// crossings of the row, sorted; a centre is inside when an odd number of crossings lie
+		// to its right. Same decision, same arithmetic as testing every edge for every cell,
+		// but cells + edges per row instead of cells x edges.
+		var insideCount = 0, xs = [];
 		for (var iy = 0; iy < ny; iy++) {
 			var py = minY + (iy + 0.5) * cell;
-			for (var ix = 0; ix < nx; ix++) {
-				var px = minX + (ix + 0.5) * cell, c = false;
-				for (var k = 0, j = n - 1; k < n; j = k++) {
-					if ((poly[k].y > py) !== (poly[j].y > py) &&
-						px < (poly[j].x - poly[k].x) * (py - poly[k].y) / (poly[j].y - poly[k].y) + poly[k].x) c = !c;
+			xs.length = 0;
+			for (var k = 0, j = n - 1; k < n; j = k++) {
+				if ((poly[k].y > py) !== (poly[j].y > py)) {
+					xs.push((poly[j].x - poly[k].x) * (py - poly[k].y) / (poly[j].y - poly[k].y) + poly[k].x);
 				}
-				if (c) { inside[iy * nx + ix] = 1; insideCount++; }
+			}
+			if (!xs.length) continue;
+			xs.sort(function (p, q) { return p - q; });
+			var left = 0; // crossings at or left of the current centre
+			for (var ix = 0; ix < nx; ix++) {
+				var px = minX + (ix + 0.5) * cell;
+				while (left < xs.length && !(px < xs[left])) left++;
+				if ((xs.length - left) % 2) { inside[iy * nx + ix] = 1; insideCount++; }
 			}
 		}
 		var used = 0;
 		return {
 			minX: minX, minY: minY, maxX: maxX, maxY: maxY, cell: cell,
+			insideMask: inside, // for tests
 			add: function (x, y, z) {
 				var ix = Math.floor((x - minX) / cell), iy = Math.floor((y - minY) / cell);
 				if (ix < 0 || iy < 0 || ix >= nx || iy >= ny) return;

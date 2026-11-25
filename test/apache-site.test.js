@@ -8,12 +8,14 @@ const path = require('path');
 const conf = fs.readFileSync(path.join(__dirname, '..', 'web', 'apache-site.conf'), 'utf8');
 const directives = conf.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
 
-test('only the volume address is proxied to the app', () => {
+test('only an exact POST to the volume address is proxied to the app', () => {
   const proxy = directives.filter((l) => /^Proxy/i.test(l) || /\[P[\],]/.test(l));
   assert.deepStrictEqual(proxy, [
-    'ProxyPass /opcviewer-api/volume http://127.0.0.1:{{PORT}}/opcviewer-api/volume',
-    'ProxyPassReverse /opcviewer-api/volume http://127.0.0.1:{{PORT}}/opcviewer-api/volume',
+    'ProxyPassMatch "^/(opcviewer-api/volume)$" "http://127.0.0.1:{{PORT}}/$1"',
   ]);
+  // other methods on that address are refused by Apache itself
+  const block = conf.slice(conf.indexOf('<Location "/opcviewer-api/">'), conf.indexOf('</Location>'));
+  assert.match(block, /<LimitExcept POST>\s*Require all denied\s*<\/LimitExcept>/);
 });
 
 test('the installer enables the proxy modules', () => {

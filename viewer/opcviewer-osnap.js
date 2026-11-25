@@ -71,8 +71,13 @@
 					if ((tt < e || tt > 1 - e) && (uu < e || uu > 1 - e)) continue;
 					var onI = lerp(segments[i][0], segments[i][1], tt), onJ = lerp(segments[j][0], segments[j][1], uu);
 					var mean = (onI.z + onJ.z) / 2;
+					var at = { x: onI.x, y: onI.y, z: mean };
+					// Ask the cloud for its height (a GPU pick) only for a crossing near the cursor.
+					var s0 = project(at);
+					if (!s0 || (s0.x - cursor.x) * (s0.x - cursor.x) + (s0.y - cursor.y) * (s0.y - cursor.y) > RADIUS * RADIUS) continue;
 					var z = surfaceZ ? surfaceZ(onI.x, onI.y, mean) : null;
-					consider('int', { x: onI.x, y: onI.y, z: typeof z === 'number' && isFinite(z) ? z : mean });
+					if (typeof z === 'number' && isFinite(z)) at.z = z;
+					consider('int', at);
 				}
 			}
 		}

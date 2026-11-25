@@ -60,3 +60,12 @@ test('the highlight encodes the counted cells of the full grid', () => {
   const counted = h.mask.reduce((s, v) => s + v, 0);
   assert.ok(Math.abs(counted * r.cell * r.cell - r.area) < 1e-6, `${counted} cells vs area ${r.area}`);
 });
+
+test('an outline far away from the cloud is answered at once, without building its grid', () => {
+  // ~4 million cells and 500 edges, nowhere near the cloud (the expensive case for the grid)
+  const far = Array.from({ length: 500 }, (_, i) => [495 + 495 * Math.cos(i / 250 * Math.PI), 495 + 495 * Math.sin(i / 250 * Math.PI), 0]);
+  const t0 = Date.now();
+  const r = computeVolume(FIX('default'), far);
+  assert.strictEqual(r.points, 0);
+  assert.ok(Date.now() - t0 < 300, `took ${Date.now() - t0} ms`);
+});

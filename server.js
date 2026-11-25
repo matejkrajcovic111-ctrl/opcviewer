@@ -37,8 +37,12 @@ app.post('/opcviewer-api/volume', express.json({ limit: '64kb' }), async (req, r
   try {
     const { project, outline } = volumeService.validateVolumeRequest(req.body);
     const metadataPath = await volumeService.resolveVolumeProject(project);
-    res.json(await volumeJobs.run(metadataPath, outline));
+    // The visitor left (moved the outline again, closed the page): stop working for them.
+    const gone = new AbortController();
+    res.on('close', () => { if (!res.writableFinished) gone.abort(); });
+    res.json(await volumeJobs.run(metadataPath, outline, gone.signal));
   } catch (err) {
+    if (err.status === 499) return; // nobody is listening any more
     const status = err.status || 500;
     if (status >= 500 && status !== 504) console.error('volume:', err.message);
     res.status(status).json({ error: status >= 500 && status !== 504 ? 'The volume could not be calculated' : err.message });
@@ -48,6 +52,9 @@ app.use('/opcviewer-api', (err, req, res, next) => { // body too large or not JS
   if (!err) return next();
   res.status(err.status === 413 ? 413 : 400).json({ error: err.status === 413 ? 'The outline is too large' : 'Bad request' });
 });
+// Anything else under /opcviewer-api (other methods, other paths): a plain 404 here, so it
+// never reaches the sessions and the login check below.
+app.use('/opcviewer-api', (req, res) => res.status(404).end());
 
 app.use(express.json({ limit: '1mb' }));
 app.use(

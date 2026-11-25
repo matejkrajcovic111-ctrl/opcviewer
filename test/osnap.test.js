@@ -72,3 +72,13 @@ test('targets behind the camera (no screen position) are skipped', () => {
 test('defaults: on, with End, Mid and Int, Perp off', () => {
   assert.deepStrictEqual({ ...O.state }, { on: true, end: true, mid: true, perp: false, int: true });
 });
+
+test('the cloud is only asked for a height at crossings near the cursor', () => {
+  const A = [P(0, 0, 10), P(10, 10, 20)], B = [P(0, 10, 30), P(10, 0, 40)];
+  let calls = 0;
+  const surfaceZ = () => { calls++; return 12.5; };
+  assert.strictEqual(O.pick({ x: 300, y: 300 }, [A, B], [], null, ALL, project, surfaceZ), null);
+  assert.strictEqual(calls, 0);
+  assert.strictEqual(O.pick({ x: 50, y: 48 }, [A, B], [], null, ALL, project, surfaceZ).pos.z, 12.5);
+  assert.strictEqual(calls, 1);
+});

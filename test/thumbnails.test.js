@@ -16,3 +16,10 @@ test('when the browser cannot start, a thumbnail fails instead of retrying forev
   );
   assert.ok(launches <= 2, `launched ${launches} times`);
 });
+
+test('thumbnails hide the OSNAP bar and its marker like the other overlays', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'thumbnails.js'), 'utf8');
+  const ids = /const hideIds = \[([^\]]*)\]/.exec(src)[1];
+  assert.match(ids, /'zm-osnap'/);
+  assert.match(ids, /'zm-osnap-mark'/);
+});
